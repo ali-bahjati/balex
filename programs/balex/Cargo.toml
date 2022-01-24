@@ -17,3 +17,5 @@ default = []
 
 [dependencies]
 anchor-lang = "0.20.1"
+anchor-spl = "0.20.1"
+agnostic-orderbook = {git = "https://github.com/Bonfida/agnostic-orderbook.git", features = ["no-entrypoint", "lib"]}
