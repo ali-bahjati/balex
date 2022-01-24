@@ -42,6 +42,11 @@ describe('balex', () => {
   let aliceAccountQoute: anchor.web3.PublicKey;
   let bobAccountBase: anchor.web3.PublicKey;
   let bobAccountQoute: anchor.web3.PublicKey;
+
+  let aliceUserAccount: anchor.web3.PublicKey;
+  let aliceBump: number;
+  let bobUserAccount: anchor.web3.PublicKey;
+  let bobBump: number;
   
 
   it('Is setup!', async () => {
@@ -124,10 +129,10 @@ describe('balex', () => {
   });
 
   it('Initialize user accounts', async () => {
-    let [aliceUserAccount, aliceBump] = await anchor.web3.PublicKey.findProgramAddress([alice.publicKey.toBuffer()], program.programId)
-    let [bobUserAccount, bobBump] = await anchor.web3.PublicKey.findProgramAddress([bob.publicKey.toBuffer()], program.programId)
+    [aliceUserAccount, aliceBump] = await anchor.web3.PublicKey.findProgramAddress([alice.publicKey.toBuffer()], program.programId);
+    [bobUserAccount, bobBump] = await anchor.web3.PublicKey.findProgramAddress([bob.publicKey.toBuffer()], program.programId);
 
-    const aliceTx = await program.rpc.initializeAccount(aliceBump, lexMarket.publicKey, {
+    await program.rpc.initializeAccount(aliceBump, lexMarket.publicKey, {
       accounts: {
         userAccount: aliceUserAccount,
         owner: alice.publicKey,
@@ -136,7 +141,7 @@ describe('balex', () => {
       signers: [alice]
     });
 
-    const bobTx = await program.rpc.initializeAccount(bobBump, lexMarket.publicKey, {
+    await program.rpc.initializeAccount(bobBump, lexMarket.publicKey, {
       accounts: {
         userAccount: bobUserAccount,
         owner: bob.publicKey,
@@ -144,5 +149,82 @@ describe('balex', () => {
       },
       signers: [bob]
     });
+  });
+
+  it('Invalid deposit', async() => {
+    assert.rejects(
+      program.rpc.deposit(bobBump, new anchor.BN(10), {
+          accounts: {
+            owner: bob.publicKey,
+            userAccount: bobUserAccount,
+            market: lexMarket.publicKey,
+            vault: aliceAccountBase,
+            tokenSource: bobAccountQoute,
+            tokenProgram: spl_token.TOKEN_PROGRAM_ID
+          },
+          signers: [bob]
+        }
+      )
+    );
+
+    assert.rejects(
+      program.rpc.deposit(bobBump, new anchor.BN(1000), {
+          accounts: {
+            owner: bob.publicKey,
+            userAccount: bobUserAccount,
+            market: lexMarket.publicKey,
+            vault: lexQouteVault,
+            tokenSource: bobAccountQoute,
+            tokenProgram: spl_token.TOKEN_PROGRAM_ID
+          },
+          signers: [bob]
+        }
+      )
+    );
+  });
+
+  it('Deposit balance', async () => {
+    await program.rpc.deposit(aliceBump, new anchor.BN(20), {
+      accounts: {
+        owner: alice.publicKey,
+        userAccount: aliceUserAccount,
+        market: lexMarket.publicKey,
+        vault: lexBaseVault,
+        tokenSource: aliceAccountBase,
+        tokenProgram: spl_token.TOKEN_PROGRAM_ID
+      },
+      signers: [alice]
+    });
+
+    await program.rpc.deposit(aliceBump, new anchor.BN(10), {
+      accounts: {
+        owner: alice.publicKey,
+        userAccount: aliceUserAccount,
+        market: lexMarket.publicKey,
+        vault: lexBaseVault,
+        tokenSource: aliceAccountBase,
+        tokenProgram: spl_token.TOKEN_PROGRAM_ID
+      },
+      signers: [alice]
+    });
+
+    assert.equal((await mintBase.getAccountInfo(lexBaseVault)).amount, 30);
+    assert.equal((await program.account.userAccount.fetch(aliceUserAccount)).baseTokenFree.toNumber(), 30);
+
+    await program.rpc.deposit(bobBump, new anchor.BN(50), {
+      accounts: {
+        owner: bob.publicKey,
+        userAccount: bobUserAccount,
+        market: lexMarket.publicKey,
+        vault: lexQouteVault,
+        tokenSource: bobAccountQoute,
+        tokenProgram: spl_token.TOKEN_PROGRAM_ID
+      },
+      signers: [bob]
+    });
+
+    assert.equal((await mintQoute.getAccountInfo(lexQouteVault)).amount, 50);
+    assert.equal((await program.account.userAccount.fetch(bobUserAccount)).baseTokenFree.toNumber(), 0);
+    assert.equal((await program.account.userAccount.fetch(bobUserAccount)).qouteTokenFree.toNumber(), 50);
   });
 });
