@@ -1,6 +1,6 @@
 use anchor_lang::prelude::*;
 use anchor_lang::{AnchorDeserialize, AnchorSerialize};
-use anchor_spl::token::{TokenAccount, Token};
+use anchor_spl::token::{TokenAccount};
 
 declare_id!("CGQawUSGDyLdA96dbaL3YsA61JPdyv1zPYmvDRjpnHjF");
 
@@ -50,10 +50,17 @@ pub mod balex {
             msg!("{}", error);
             return Err(ProgramError::InvalidAccountData)
         }
+
         Ok(())
     }
 
-    // initialize_account
+    pub fn initialize_account(ctx: Context<InitializeAccount>, user_account_bump: u8, market: Pubkey) -> ProgramResult {
+        ctx.accounts.user_account.owner = ctx.accounts.owner.key();
+        ctx.accounts.user_account.market = market;
+
+        Ok(())
+    }
+
     // deposit
     // withdraw
     // new order
@@ -69,31 +76,43 @@ pub mod balex {
 #[derive(Accounts)]
 pub struct InitializeMarket<'info> {
     #[account(mut)]
-    admin: Signer<'info>,
+    pub admin: Signer<'info>,
 
     #[account(init, payer=admin)]
-    market: Account<'info, LexMarket>,
+    pub market: Account<'info, LexMarket>,
 
     #[account()]
-    base_vault: Account<'info, TokenAccount>,
+    pub base_vault: Account<'info, TokenAccount>,
 
     #[account()]
-    qoute_vault: Account<'info, TokenAccount>,
+    pub qoute_vault: Account<'info, TokenAccount>,
 
     #[account(mut)]
-    event_queue: AccountInfo<'info>,
+    pub event_queue: AccountInfo<'info>,
 
     #[account(mut)]
-    orderbook: AccountInfo<'info>,
+    pub orderbook: AccountInfo<'info>,
 
     #[account(mut)]
-    asks: AccountInfo<'info>,
+    pub asks: AccountInfo<'info>,
 
     #[account(mut)]
-    bids: AccountInfo<'info>,
+    pub bids: AccountInfo<'info>,
 
     #[account()]
-    system_program: Program<'info, System>
+    pub system_program: Program<'info, System>
+}
+
+#[derive(Accounts)]
+#[instruction(user_account_bump: u8)]
+pub struct InitializeAccount<'info> {
+    #[account(mut)]
+    pub owner: Signer<'info>,
+
+    #[account(init, payer=owner, space=8 + 32*3, seeds=[&owner.key().to_bytes()], bump=user_account_bump)]
+    pub user_account: Account<'info, UserAccount>,
+
+    pub system_program: Program<'info, System>,
 }
 
 #[account]
@@ -115,21 +134,17 @@ pub struct LexMarket {
     signer_bump: u8
 }
 
+// Current assumption is that we only are handling one pair of token (lend usdt with eth)
 #[account]
 pub struct UserAccount {
-    header: UserHeader,
-    orders: [Pubkey; 64]
-}
-
-// Current assumption is that we only are handling one pair of token (lend usdt with eth)
-
-#[derive(AnchorSerialize, AnchorDeserialize, Clone)]
-pub struct UserHeader {
     owner: Pubkey,
+    market: Pubkey,
 
     base_token_free: u64,
     base_token_locked: u64,
 
     qoute_token_free: u64,
     qoute_token_locked: u64,
+
+    // orders: [Pubkey; 64] // TODO: Make length adjustable
 }

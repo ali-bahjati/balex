@@ -67,8 +67,8 @@ describe('balex', () => {
     bobAccountQoute = await mintQoute.createAssociatedTokenAccount(bob.publicKey);
     await mintQoute.mintTo(bobAccountQoute, admin, [], 100);
 
-    lexBaseVault = await mintBase.createAccount(marketSigner);
-    lexQouteVault = await mintQoute.createAccount(marketSigner);
+    lexBaseVault = await mintBase.createAccount(marketSigner); // TODO: Investigate why associated token account didn't work
+    lexQouteVault = await mintQoute.createAccount(marketSigner); 
 
     assert.equal((await mintBase.getAccountInfo(aliceAccountBase)).amount, 100);
     assert.equal((await mintQoute.getAccountInfo(aliceAccountQoute)).amount, 100);
@@ -118,6 +118,31 @@ describe('balex', () => {
       },
       signers: [admin, lexMarket]
     });
-    console.log("Your transaction signature", tx);
+
+    // let lexMarketAccount = await program.account.lexMarket.fetch(lexMarket.publicKey);
+    // console.log(lexMarketAccount);
+  });
+
+  it('Initialize user accounts', async () => {
+    let [aliceUserAccount, aliceBump] = await anchor.web3.PublicKey.findProgramAddress([alice.publicKey.toBuffer()], program.programId)
+    let [bobUserAccount, bobBump] = await anchor.web3.PublicKey.findProgramAddress([bob.publicKey.toBuffer()], program.programId)
+
+    const aliceTx = await program.rpc.initializeAccount(aliceBump, lexMarket.publicKey, {
+      accounts: {
+        userAccount: aliceUserAccount,
+        owner: alice.publicKey,
+        systemProgram: anchor.web3.SystemProgram.programId
+      },
+      signers: [alice]
+    });
+
+    const bobTx = await program.rpc.initializeAccount(bobBump, lexMarket.publicKey, {
+      accounts: {
+        userAccount: bobUserAccount,
+        owner: bob.publicKey,
+        systemProgram: anchor.web3.SystemProgram.programId
+      },
+      signers: [bob]
+    });
   });
 });
