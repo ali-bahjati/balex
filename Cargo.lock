@@ -249,6 +249,7 @@ dependencies = [
  "agnostic-orderbook",
  "anchor-lang",
  "anchor-spl",
+ "pyth-client 0.3.0",
 ]
 
 [[package]]
@@ -337,7 +338,7 @@ checksum = "4984a3d4ffad576e70af8faedbec1fa0830428a118490807e91c1a0a7dfdc4f7"
 dependencies = [
  "bonfida-macros",
  "borsh",
- "pyth-client",
+ "pyth-client 0.2.2",
  "solana-program",
 ]
 
@@ -925,6 +926,21 @@ name = "pyth-client"
 version = "0.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "44de48029c54ec1ca570786b5baeb906b0fc2409c8e0145585e287ee7a526c72"
+
+[[package]]
+name = "pyth-client"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6a99198087943003b585590a42c3e323523b94a2c9e1df3e2636ebce39535a26"
+dependencies = [
+ "borsh",
+ "borsh-derive",
+ "bytemuck",
+ "num-derive",
+ "num-traits",
+ "solana-program",
+ "thiserror",
+]
 
 [[package]]
 name = "quote"

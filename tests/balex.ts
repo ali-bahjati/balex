@@ -10,8 +10,6 @@ describe('balex', () => {
   const provider = anchor.Provider.env();
   anchor.setProvider(provider);
 
-  const systemProgram = anchor.web3.SystemProgram;
-
   const program = anchor.workspace.Balex as Program<Balex>;
   const connection = provider.connection;
 
@@ -19,6 +17,8 @@ describe('balex', () => {
 
   let mintBase: spl_token.Token;
   let mintQoute: spl_token.Token;
+
+  let priceOracle = anchor.web3.Keypair.generate();
 
   // Market accounts
   const NODE_CAPACITY = 100;
@@ -107,9 +107,20 @@ describe('balex', () => {
       'confirmed'
     );
 
-    console.log("Initialize Lex market")
-    
-    const tx = await program.rpc.initializeMarket(signerBump, mintBase.publicKey, mintQoute.publicKey, {
+    console.log("Create Stub Price account");
+    await program.rpc.setStubPrice(new anchor.BN(100), new anchor.BN(10), {
+      accounts: {
+        admin: admin.publicKey,
+        stubPrice: priceOracle.publicKey,
+        systemProgram: anchor.web3.SystemProgram.programId,
+      }, signers: [admin, priceOracle]
+    })
+
+    console.log("Initialize Lex market");
+
+    const oracleType = { stub: {} }
+
+    const tx = await program.rpc.initializeMarket(signerBump, mintBase.publicKey, mintQoute.publicKey, oracleType, {
       accounts: {
         admin: admin.publicKey,
         market: lexMarket.publicKey,
@@ -117,6 +128,7 @@ describe('balex', () => {
         qouteVault: lexQouteVault,
         eventQueue: eventQueue.publicKey,
         orderbook: orderbook.publicKey,
+        priceOracle: priceOracle.publicKey,
         asks: asks.publicKey,
         bids: bids.publicKey,
         systemProgram: anchor.web3.SystemProgram.programId

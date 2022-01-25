@@ -1,6 +1,7 @@
 use anchor_lang::prelude::*;
 use anchor_lang::{AnchorDeserialize, AnchorSerialize};
 use anchor_spl::token::{transfer, Token, TokenAccount, Transfer};
+use pyth_client::load_price;
 
 declare_id!("CGQawUSGDyLdA96dbaL3YsA61JPdyv1zPYmvDRjpnHjF");
 
@@ -15,6 +16,7 @@ pub mod balex {
         signer_bump: u8,
         base_mint: Pubkey,
         qoute_mint: Pubkey,
+        oracle_type: OracleType,
     ) -> ProgramResult {
         let market = &mut ctx.accounts.market;
 
@@ -28,6 +30,22 @@ pub mod balex {
         market.signer_bump = signer_bump;
 
         market.over_collateral_percent = 50;
+
+        // TODO: More check on oracle to be from correct program
+        match oracle_type {
+            OracleType::Pyth => {
+                let price_data = ctx.accounts.price_oracle.try_borrow_data()?;
+                let price = load_price(*price_data)?;
+                msg!("{} {}", price.agg.price, price.agg.conf);
+            },
+            OracleType::Stub => {
+                let price: Account<StubPrice> = Account::try_from(&ctx.accounts.price_oracle)?;
+                msg!("{} {}", price.price, price.conf);
+            }
+        }
+
+        market.oracle_type = oracle_type;
+        market.price_oracle = ctx.accounts.price_oracle.key();
 
         market.orderbook = ctx.accounts.orderbook.key();
 
@@ -93,6 +111,15 @@ pub mod balex {
         Ok(())
     }
 
+    pub fn set_stub_price(ctx: Context<SetStubPrice>, price: i64, conf: u64) -> ProgramResult {
+        ctx.accounts.stub_price.price = price;
+        ctx.accounts.stub_price.conf = conf;
+
+        msg!("Price is set to {} conf {}", price, conf);
+        
+        Ok(())
+    }
+
     // withdraw
     // new order
     // clear debt
@@ -109,7 +136,7 @@ pub struct InitializeMarket<'info> {
     #[account(mut)]
     pub admin: Signer<'info>,
 
-    #[account(init, payer=admin)]
+    #[account(init, payer=admin, space = 8 + 32*7 + 3)]
     pub market: Account<'info, LexMarket>,
 
     #[account()]
@@ -129,6 +156,9 @@ pub struct InitializeMarket<'info> {
 
     #[account(mut)]
     pub bids: AccountInfo<'info>,
+
+    #[account()]
+    pub price_oracle: AccountInfo<'info>,
 
     #[account()]
     pub system_program: Program<'info, System>,
@@ -170,8 +200,36 @@ pub struct Deposit<'info> {
     pub token_program: Program<'info, Token>,
 }
 
+#[derive(Accounts)]
+pub struct SetStubPrice<'info> {
+    #[account(mut)]
+    pub admin: Signer<'info>,
+
+    #[account(init_if_needed, payer=admin)]
+    pub stub_price: Account<'info, StubPrice>,
+    
+    #[account()]
+    pub system_program: Program<'info, System>
+}
+
+#[derive(AnchorSerialize, AnchorDeserialize, Clone)]
+#[repr(u8)]
+pub enum OracleType {
+    Stub, // Stub will be only similar to PriceInfo of Pyth as data of the price account
+    Pyth
+}
+
+// TODO: Complete it as we go
 #[account]
 #[derive(Default)]
+pub struct StubPrice {
+  /// the current price
+  pub price: i64,
+  /// confidence interval around the price
+  pub conf: u64,
+}
+
+#[account]
 pub struct LexMarket {
     base_mint: Pubkey,
     qoute_mint: Pubkey,
@@ -181,7 +239,8 @@ pub struct LexMarket {
     //Ratio of over collateralization, num between 0-100
     over_collateral_percent: u8,
 
-    pyth_price: Pubkey,
+    oracle_type: OracleType,
+    price_oracle: Pubkey,
 
     orderbook: Pubkey,
     admin: Pubkey,
