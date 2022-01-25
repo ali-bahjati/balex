@@ -36,11 +36,11 @@ pub mod balex {
             OracleType::Pyth => {
                 let price_data = ctx.accounts.price_oracle.try_borrow_data()?;
                 let price = load_price(*price_data)?;
-                msg!("{} {}", price.agg.price, price.agg.conf);
+                msg!("Current price is {} conf {}", price.agg.price, price.agg.conf);
             },
             OracleType::Stub => {
                 let price: Account<StubPrice> = Account::try_from(&ctx.accounts.price_oracle)?;
-                msg!("{} {}", price.price, price.conf);
+                msg!("Current price is {} conf {}", price.price, price.conf);
             }
         }
 

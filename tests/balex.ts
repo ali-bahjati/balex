@@ -18,7 +18,7 @@ describe('balex', () => {
   let mintBase: spl_token.Token;
   let mintQoute: spl_token.Token;
 
-  let priceOracle = anchor.web3.Keypair.generate();
+  let stubPriceOracle = anchor.web3.Keypair.generate();
 
   // Market accounts
   const NODE_CAPACITY = 100;
@@ -111,14 +111,22 @@ describe('balex', () => {
     await program.rpc.setStubPrice(new anchor.BN(100), new anchor.BN(10), {
       accounts: {
         admin: admin.publicKey,
-        stubPrice: priceOracle.publicKey,
+        stubPrice: stubPriceOracle.publicKey,
         systemProgram: anchor.web3.SystemProgram.programId,
-      }, signers: [admin, priceOracle]
+      }, signers: [admin, stubPriceOracle]
     })
 
     console.log("Initialize Lex market");
 
     const oracleType = { stub: {} }
+    const oraclePubkey = stubPriceOracle.publicKey;
+
+    
+    // In order to test with Pyth run validator yourself and copy account data then test without validator initialization:
+    // $ solana-test-validator --reset -c GVXRSBjFk6e6J3NbVPXohDJetcTjaeeuykUpbQF8UoMU --url=m
+    // $ anchor test --skip-local-validator
+    // const oracleType = { pyth: {} }
+    // const oraclePubkey = new anchor.web3.PublicKey("GVXRSBjFk6e6J3NbVPXohDJetcTjaeeuykUpbQF8UoMU")
 
     const tx = await program.rpc.initializeMarket(signerBump, mintBase.publicKey, mintQoute.publicKey, oracleType, {
       accounts: {
@@ -128,7 +136,7 @@ describe('balex', () => {
         qouteVault: lexQouteVault,
         eventQueue: eventQueue.publicKey,
         orderbook: orderbook.publicKey,
-        priceOracle: priceOracle.publicKey,
+        priceOracle: oraclePubkey,
         asks: asks.publicKey,
         bids: bids.publicKey,
         systemProgram: anchor.web3.SystemProgram.programId
