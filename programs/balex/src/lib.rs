@@ -39,8 +39,8 @@ pub mod balex {
         processor::stub_oracle::set_stub_price(ctx, price, conf)
     }
 
-    pub fn new_order(ctx: Context<NewOrder>, _bump: u8, side_num: u8, rate: u64, qty: u64) -> ProgramResult {
-        processor::order::new_order(ctx, _bump, side_num, rate, qty)
+    pub fn new_order(ctx: Context<NewOrder>, _bump: u8, side_num: u8, interest_rate: u64, qty: u64) -> ProgramResult {
+        processor::order::new_order(ctx, _bump, side_num, interest_rate, qty)
     }
 
     // withdraw

@@ -8,8 +8,8 @@ pub struct InitializeMarket<'info> {
     #[account(mut)]
     pub admin: Signer<'info>,
 
-    #[account(init, payer=admin, space = 8 + 32*7 + 3)]
-    pub market: Account<'info, LexMarket>,
+    #[account(zero)]
+    pub market: AccountLoader<'info, LexMarket>,
 
     #[account()]
     pub base_vault: Account<'info, TokenAccount>,
@@ -43,7 +43,7 @@ pub fn initialize_market(
     qoute_mint: Pubkey,
     oracle_type: OracleType,
 ) -> ProgramResult {
-    let market = &mut ctx.accounts.market;
+    let mut market = ctx.accounts.market.load_init()?;
 
     market.admin = ctx.accounts.admin.key();
     market.base_mint = base_mint;

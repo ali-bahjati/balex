@@ -8,8 +8,8 @@ pub struct InitializeAccount<'info> {
     #[account(mut)]
     pub owner: Signer<'info>,
 
-    #[account(init, payer=owner, space=8 + 32*3, seeds=[&owner.key().to_bytes()], bump=_bump)]
-    pub user_account: Account<'info, UserAccount>,
+    #[account(init, payer=owner, space = 8 + std::mem::size_of::<UserAccount>(), seeds=[&owner.key().to_bytes()], bump=_bump)]
+    pub user_account: AccountLoader<'info, UserAccount>,
 
     #[account()]
     pub system_program: Program<'info, System>,
@@ -23,10 +23,10 @@ pub struct Deposit<'info> {
 
     #[account(mut, seeds=[&owner.key().to_bytes()], bump=_bump)]
     // TODO: If it's gonna be per market also add market here
-    pub user_account: Account<'info, UserAccount>,
+    pub user_account: AccountLoader<'info, UserAccount>,
 
     #[account()]
-    pub market: Account<'info, LexMarket>,
+    pub market: AccountLoader<'info, LexMarket>,
 
     #[account(mut)]
     pub vault: Account<'info, TokenAccount>,
@@ -43,17 +43,22 @@ pub fn initialize_account(
     _bump: u8,
     market: Pubkey,
 ) -> ProgramResult {
-    ctx.accounts.user_account.owner = ctx.accounts.owner.key();
-    ctx.accounts.user_account.market = market;
+    let mut user_account = ctx.accounts.user_account.load_init()?;
+
+    user_account.owner = ctx.accounts.owner.key();
+    user_account.market = market;
 
     Ok(())
 }
 
 pub fn deposit(ctx: Context<Deposit>, _bump: u8, amount: u64) -> ProgramResult {
-    if ctx.accounts.vault.key() == ctx.accounts.market.base_vault {
-        ctx.accounts.user_account.base_token_free += amount;
-    } else if ctx.accounts.vault.key() == ctx.accounts.market.qoute_vault {
-        ctx.accounts.user_account.qoute_token_free += amount;
+    let market = ctx.accounts.market.load()?;
+    let mut user_account = ctx.accounts.user_account.load_mut()?;
+
+    if ctx.accounts.vault.key() == market.base_vault {
+        user_account.base_free += amount;
+    } else if ctx.accounts.vault.key() == market.qoute_vault {
+        user_account.qoute_total += amount;
     } else {
         msg!("Vault address is not base nor qoute vault of the market");
         return Err(ProgramError::InvalidAccountData);

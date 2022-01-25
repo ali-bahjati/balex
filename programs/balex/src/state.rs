@@ -6,7 +6,7 @@ pub static CALLBACK_INFO_LEN: u64 = 32;
 pub static CALLBACK_ID_LEN: u64 = 32;
 
 
-#[derive(AnchorSerialize, AnchorDeserialize, Clone)]
+#[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy)]
 #[repr(u8)]
 pub enum OracleType {
     Stub, // Stub will be only similar to PriceInfo of Pyth as data of the price account
@@ -23,7 +23,21 @@ pub struct StubPrice {
   pub conf: u64,
 }
 
-#[account]
+#[zero_copy]
+#[derive(AnchorDeserialize, AnchorSerialize, Default)]
+pub struct Debt {
+    pub lender: Pubkey,
+    pub borrower: Pubkey,
+    pub timestamp: i64,
+    pub interest_rate: u64,
+    pub qty: u64
+}
+
+
+pub const TOTAL_OPEN_DEBTS_SIZE: usize = 256;
+
+#[account(zero_copy)]
+#[repr(packed)]
 pub struct LexMarket {
     pub base_mint: Pubkey,
     pub qoute_mint: Pubkey,
@@ -32,29 +46,39 @@ pub struct LexMarket {
 
     //Ratio of over collateralization, num between 0-100
     pub over_collateral_percent: u8,
-
+    pub signer_bump: u8,
     pub oracle_type: OracleType,
+
     pub price_oracle: Pubkey,
 
     pub orderbook: Pubkey,
     pub admin: Pubkey,
 
-    pub signer_bump: u8,
+
+    pub debts: [Debt; TOTAL_OPEN_DEBTS_SIZE]
 }
 
 // current assumption is that we only are handling one pair of token (lend usdt with eth)
-#[account]
+pub const USER_OPEN_ORDERS_SIZE: usize = 16;
+pub const USER_OPEN_DEBTS_SIZE: usize = 16;
+
+#[account(zero_copy)]
+#[repr(packed)]
 pub struct UserAccount {
     pub owner: Pubkey,
     pub market: Pubkey,
 
-    pub base_token_free: u64,
-    pub base_token_locked: u64,
+    pub base_free: u64, // includes borrowed ones
+    pub base_locked: u64, // given to lend
+    pub base_borrowed: u64, // total borrowed base
 
-    pub qoute_token_free: u64,
-    pub qoute_token_locked: u64,
-    // open_orders: [u64; 64] // TODO: Make length adjustable, also user orderId
-    // in_debt_orders:
+    pub qoute_total: u64, // amount of locked is dynamic per time
+
+    pub open_orders_cnt: u8,
+
+    pub open_orders: [u128; USER_OPEN_ORDERS_SIZE], // TODO: Make length adjustable, also user orderId
+    // debts:
+    pub open_debts: [u16; USER_OPEN_DEBTS_SIZE] // TODO: Make length adjustable
 }
 
 pub fn get_qoute_price(oracle_type: &OracleType, oracle_account: &AccountInfo) -> Option<i64> {
@@ -75,10 +99,10 @@ pub fn get_qoute_price(oracle_type: &OracleType, oracle_account: &AccountInfo) -
 }
 
 // No debt is considered right now. Should change adding debt
-pub fn get_max_borrow_qty(user_account: &Account<UserAccount>, market: &Account<LexMarket>, oracle_account: &AccountInfo) -> u64 {
+pub fn get_max_borrow_qty(user_account: &UserAccount, market: &LexMarket, oracle_account: &AccountInfo) -> u64 {
     let price: u64 = get_qoute_price(&market.oracle_type, &oracle_account).unwrap() as u64; // If price is not present?
 
     let over_collateral_price = price * (100 + market.over_collateral_percent as u64 + 99) / 100; // Overflow?
 
-    user_account.qoute_token_free / over_collateral_price
+    user_account.qoute_total / over_collateral_price
 }

@@ -134,6 +134,7 @@ describe('balex', () => {
     // const oracleType = { pyth: {} }
     // const oraclePubkey = new anchor.web3.PublicKey("GVXRSBjFk6e6J3NbVPXohDJetcTjaeeuykUpbQF8UoMU")
 
+    console.log(program.account.lexMarket.size)
     const tx = await program.rpc.initializeMarket(signerBump, mintBase.publicKey, mintQoute.publicKey, oracleType, {
       accounts: {
         admin: admin.publicKey,
@@ -147,7 +148,8 @@ describe('balex', () => {
         bids: bids.publicKey,
         systemProgram: anchor.web3.SystemProgram.programId
       },
-      signers: [admin, lexMarket]
+      signers: [admin, lexMarket],
+      preInstructions: [await program.account.lexMarket.createInstruction(lexMarket)]
     });
 
     // let lexMarketAccount = await program.account.lexMarket.fetch(lexMarket.publicKey);
@@ -235,7 +237,7 @@ describe('balex', () => {
     });
 
     assert.equal((await mintBase.getAccountInfo(lexBaseVault)).amount, 30);
-    assert.equal((await program.account.userAccount.fetch(aliceUserAccount)).baseTokenFree.toNumber(), 30);
+    assert.equal((await program.account.userAccount.fetch(aliceUserAccount)).baseFree.toNumber(), 30);
 
     await program.rpc.deposit(bobBump, new anchor.BN(5000), {
       accounts: {
@@ -250,8 +252,8 @@ describe('balex', () => {
     });
 
     assert.equal((await mintQoute.getAccountInfo(lexQouteVault)).amount, 5000);
-    assert.equal((await program.account.userAccount.fetch(bobUserAccount)).baseTokenFree.toNumber(), 0);
-    assert.equal((await program.account.userAccount.fetch(bobUserAccount)).qouteTokenFree.toNumber(), 5000);
+    assert.equal((await program.account.userAccount.fetch(bobUserAccount)).baseFree.toNumber(), 0);
+    assert.equal((await program.account.userAccount.fetch(bobUserAccount)).qouteTotal.toNumber(), 5000);
   });
 
   it('Alice creates Ask order', async () => {
