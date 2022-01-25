@@ -24,6 +24,11 @@ describe('balex', () => {
   const NODE_CAPACITY = 100;
   const EVENT_CAPACITY = 100;
 
+  let orderbook: anchor.web3.Keypair;
+  let eventQueue: anchor.web3.Keypair;
+  let bids: anchor.web3.Keypair;
+  let asks: anchor.web3.Keypair;
+
   let lexMarket = anchor.web3.Keypair.generate();
   let admin = anchor.web3.Keypair.generate();
 
@@ -63,27 +68,28 @@ describe('balex', () => {
 
     console.log("Create token accounts");
     aliceAccountBase = await mintBase.createAssociatedTokenAccount(alice.publicKey);
-    await mintBase.mintTo(aliceAccountBase, admin, [], 100);
+    await mintBase.mintTo(aliceAccountBase, admin, [], 10000);
     aliceAccountQoute = await mintQoute.createAssociatedTokenAccount(alice.publicKey);
-    await mintQoute.mintTo(aliceAccountQoute, admin, [], 100);
+    await mintQoute.mintTo(aliceAccountQoute, admin, [], 10000);
 
     bobAccountBase = await mintBase.createAssociatedTokenAccount(bob.publicKey);
-    await mintBase.mintTo(bobAccountBase, admin, [], 100);
+    await mintBase.mintTo(bobAccountBase, admin, [], 10000);
     bobAccountQoute = await mintQoute.createAssociatedTokenAccount(bob.publicKey);
-    await mintQoute.mintTo(bobAccountQoute, admin, [], 100);
+    await mintQoute.mintTo(bobAccountQoute, admin, [], 10000);
 
     lexBaseVault = await mintBase.createAccount(marketSigner); // TODO: Investigate why associated token account didn't work
     lexQouteVault = await mintQoute.createAccount(marketSigner); 
 
-    assert.equal((await mintBase.getAccountInfo(aliceAccountBase)).amount, 100);
-    assert.equal((await mintQoute.getAccountInfo(aliceAccountQoute)).amount, 100);
-    assert.equal((await mintBase.getAccountInfo(bobAccountBase)).amount, 100);
-    assert.equal((await mintQoute.getAccountInfo(bobAccountQoute)).amount, 100);
+    assert.equal((await mintBase.getAccountInfo(aliceAccountBase)).amount, 10000);
+    assert.equal((await mintQoute.getAccountInfo(aliceAccountQoute)).amount, 10000);
+    assert.equal((await mintBase.getAccountInfo(bobAccountBase)).amount, 10000);
+    assert.equal((await mintQoute.getAccountInfo(bobAccountQoute)).amount, 10000);
   });
 
   it('Market is initialized!', async () => {
     // AAOB instructions to create required accounts
-    const [[eventQueue, bids, asks, orderbook], aaobInstructions] = await aaob.createMarket(
+    let aaobInstructions: anchor.web3.TransactionInstruction[];
+    [[eventQueue, bids, asks, orderbook], aaobInstructions] = await aaob.createMarket(
       connection,
       marketSigner,
       new anchor.BN(32),
@@ -188,7 +194,7 @@ describe('balex', () => {
     );
 
     assert.rejects(
-      program.rpc.deposit(bobBump, new anchor.BN(1000), {
+      program.rpc.deposit(bobBump, new anchor.BN(1000000), {
           accounts: {
             owner: bob.publicKey,
             userAccount: bobUserAccount,
@@ -231,7 +237,7 @@ describe('balex', () => {
     assert.equal((await mintBase.getAccountInfo(lexBaseVault)).amount, 30);
     assert.equal((await program.account.userAccount.fetch(aliceUserAccount)).baseTokenFree.toNumber(), 30);
 
-    await program.rpc.deposit(bobBump, new anchor.BN(50), {
+    await program.rpc.deposit(bobBump, new anchor.BN(5000), {
       accounts: {
         owner: bob.publicKey,
         userAccount: bobUserAccount,
@@ -243,8 +249,64 @@ describe('balex', () => {
       signers: [bob]
     });
 
-    assert.equal((await mintQoute.getAccountInfo(lexQouteVault)).amount, 50);
+    assert.equal((await mintQoute.getAccountInfo(lexQouteVault)).amount, 5000);
     assert.equal((await program.account.userAccount.fetch(bobUserAccount)).baseTokenFree.toNumber(), 0);
-    assert.equal((await program.account.userAccount.fetch(bobUserAccount)).qouteTokenFree.toNumber(), 50);
+    assert.equal((await program.account.userAccount.fetch(bobUserAccount)).qouteTokenFree.toNumber(), 5000);
   });
+
+  it('Alice creates Ask order', async () => {
+    let rate = new anchor.BN(3 << 32);
+    let qty = new anchor.BN(30)
+    let askType = 1;
+    await program.rpc.newOrder(aliceBump, askType, rate, qty, {
+      accounts: {
+        owner: alice.publicKey,
+        userAccount: aliceUserAccount,
+        market: lexMarket.publicKey,
+        eventQueue: eventQueue.publicKey,
+        orderbook: orderbook.publicKey,
+        asks: asks.publicKey,
+        bids: bids.publicKey,
+        priceOracle: stubPriceOracle.publicKey,
+        systemProgram: anchor.web3.SystemProgram.programId
+      }, signers: [alice]
+    });
+  });
+
+  it('Bob creates Bid order', async () => {
+    let rate = new anchor.BN(4 << 32);
+    let qty = new anchor.BN(1000)
+    let bidType = 0;
+    assert.rejects(
+      program.rpc.newOrder(bobBump, bidType, rate, qty, {
+        accounts: {
+          owner: bob.publicKey,
+          userAccount: bobUserAccount,
+          market: lexMarket.publicKey,
+          eventQueue: eventQueue.publicKey,
+          orderbook: orderbook.publicKey,
+          asks: asks.publicKey,
+          bids: bids.publicKey,
+          priceOracle: stubPriceOracle.publicKey,
+          systemProgram: anchor.web3.SystemProgram.programId
+        }, signers: [bob]
+      })
+    );
+
+    qty = new anchor.BN(10);
+    await program.rpc.newOrder(bobBump, bidType, rate, qty, {
+        accounts: {
+          owner: bob.publicKey,
+          userAccount: bobUserAccount,
+          market: lexMarket.publicKey,
+          eventQueue: eventQueue.publicKey,
+          orderbook: orderbook.publicKey,
+          asks: asks.publicKey,
+          bids: bids.publicKey,
+          priceOracle: stubPriceOracle.publicKey,
+          systemProgram: anchor.web3.SystemProgram.programId
+        }, signers: [bob]
+      });
+  });
+
 });

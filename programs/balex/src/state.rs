@@ -57,7 +57,7 @@ pub struct UserAccount {
     // in_debt_orders:
 }
 
-pub fn get_qoute_price(oracle_type: OracleType, oracle_account: AccountInfo) -> Option<i64> {
+pub fn get_qoute_price(oracle_type: &OracleType, oracle_account: &AccountInfo) -> Option<i64> {
     match oracle_type {
         OracleType::Pyth => {
             let price_data = oracle_account.try_borrow_data().unwrap();
@@ -72,4 +72,13 @@ pub fn get_qoute_price(oracle_type: OracleType, oracle_account: AccountInfo) -> 
             Some(price.price)
         }
     }
+}
+
+// No debt is considered right now. Should change adding debt
+pub fn get_max_borrow_qty(user_account: &Account<UserAccount>, market: &Account<LexMarket>, oracle_account: &AccountInfo) -> u64 {
+    let price: u64 = get_qoute_price(&market.oracle_type, &oracle_account).unwrap() as u64; // If price is not present?
+
+    let over_collateral_price = price * (100 + market.over_collateral_percent as u64 + 99) / 100; // Overflow?
+
+    user_account.qoute_token_free / over_collateral_price
 }

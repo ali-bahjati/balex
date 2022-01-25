@@ -12,6 +12,7 @@ use processor::*;
 #[program]
 pub mod balex {
     use super::*;
+
     pub fn initialize_market(
         ctx: Context<InitializeMarket>,
         signer_bump: u8,
@@ -38,9 +39,9 @@ pub mod balex {
         processor::stub_oracle::set_stub_price(ctx, price, conf)
     }
 
-    // pub fn new_order(ctx: Context<NewOrder>) -> ProgramResult {
-    //     Ok(())
-    // }
+    pub fn new_order(ctx: Context<NewOrder>, _bump: u8, side_num: u8, rate: u64, qty: u64) -> ProgramResult {
+        processor::order::new_order(ctx, _bump, side_num, rate, qty)
+    }
 
     // withdraw
     // clear debt
