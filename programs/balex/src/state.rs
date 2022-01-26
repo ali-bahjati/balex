@@ -1,5 +1,6 @@
 use anchor_lang::prelude::*;
 use anchor_lang::{AnchorDeserialize, AnchorSerialize};
+use anchor_lang::solana_program::clock::Clock;
 use pyth_client::{load_price, PriceStatus};
 
 pub static CALLBACK_INFO_LEN: u64 = 32;
@@ -29,7 +30,7 @@ pub struct Debt {
     pub lender: Pubkey,
     pub borrower: Pubkey,
     pub timestamp: i64, //Used to calculate return interest 
-    pub interest_rate: u64,
+    pub interest_rate: u64, //fp32
     pub qty: u64 //If zero it means it's empty
 }
 
@@ -37,25 +38,25 @@ pub struct Debt {
 pub const TOTAL_OPEN_DEBTS_SIZE: usize = 256;
 
 #[account(zero_copy)]
-#[repr(packed)]
 pub struct LexMarket {
     pub base_mint: Pubkey,
     pub qoute_mint: Pubkey,
     pub base_vault: Pubkey,
     pub qoute_vault: Pubkey,
 
-    //Ratio of over collateralization, num between 0-100
-    pub over_collateral_percent: u8,
-    pub signer_bump: u8,
-    pub oracle_type: OracleType,
-
     pub price_oracle: Pubkey,
 
     pub orderbook: Pubkey,
     pub admin: Pubkey,
 
+    pub debts: [Debt; TOTAL_OPEN_DEBTS_SIZE],
 
-    pub debts: [Debt; TOTAL_OPEN_DEBTS_SIZE]
+    //Ratio of over collateralization, num between 0-100
+    pub over_collateral_percent: u8,
+    pub signer_bump: u8,
+    pub oracle_type: OracleType,
+
+    _padding: [u8; 5]
 }
 
 // current assumption is that we only are handling one pair of token (lend usdt with eth)
@@ -63,7 +64,6 @@ pub const USER_OPEN_ORDERS_SIZE: usize = 16;
 pub const USER_OPEN_DEBTS_SIZE: usize = 16;
 
 #[account(zero_copy)]
-#[repr(packed)]
 pub struct UserAccount {
     pub owner: Pubkey,
     pub market: Pubkey,
@@ -77,13 +77,15 @@ pub struct UserAccount {
 
     pub qoute_total: u64, // amount of locked is dynamic per time as price of borrowed collaterals can change
 
+    pub open_orders: [u128; USER_OPEN_ORDERS_SIZE], // TODO: Make length adjustable, also user orderId
+    // debts:
+    pub open_debts: [u16; USER_OPEN_DEBTS_SIZE], // TODO: Make length adjustable
+
     pub open_orders_cnt: u8,
 
     pub open_debts_cnt: u8,
 
-    pub open_orders: [u128; USER_OPEN_ORDERS_SIZE], // TODO: Make length adjustable, also user orderId
-    // debts:
-    pub open_debts: [u16; USER_OPEN_DEBTS_SIZE] // TODO: Make length adjustable
+    _padding: [u8; 6]
 }
 
 impl UserAccount {
@@ -107,7 +109,7 @@ pub fn get_qoute_price(oracle_type: &OracleType, oracle_account: &AccountInfo) -
             let price = load_price(*price_data).unwrap();
             match price.agg.status {
                PriceStatus::Trading => Some(price.agg.price),
-               _ => None
+               _ => Some(price.agg.price) // Change to a safe behavior
             }
         },
         OracleType::Stub => {
@@ -117,11 +119,42 @@ pub fn get_qoute_price(oracle_type: &OracleType, oracle_account: &AccountInfo) -
     }
 }
 
-// No debt is considered right now. Should change adding debt
+pub fn get_user_total_debt(user_account: &UserAccount, market: &LexMarket) -> u64 {
+    let mut total_debt: u64 = 0;
+
+    for i in 0..user_account.open_debts_cnt as usize {
+        let debt_id = user_account.open_debts[i] as usize;
+        let debt: &Debt = &market.debts[debt_id];
+
+        if debt.borrower == user_account.owner {
+            // let diff_timestamp = (Clock::get().unwrap().unix_timestamp - debt.timestamp) as u64;
+            // let profit_rate: f64 = (debt.interest_rate * diff_timestamp) as f64 / (60.*60.);
+            let profit_rate: f64 = 1.; // TODO: Handle fp32 correctly
+            let debt_as_of_now: u64 = (debt.qty as f64 * (1. + profit_rate)).round() as u64;
+            total_debt += debt_as_of_now;
+        }
+    }
+
+    total_debt
+}
+
 pub fn get_max_borrow_qty(user_account: &UserAccount, market: &LexMarket, oracle_account: &AccountInfo) -> u64 {
     let price: u64 = get_qoute_price(&market.oracle_type, &oracle_account).unwrap() as u64; // If price is not present?
 
     let over_collateral_price = price * (100 + market.over_collateral_percent as u64 + 99) / 100; // Overflow?
 
-    (user_account.qoute_total / over_collateral_price).saturating_sub(user_account.base_open_borrow)
+    let user_total_open_debt = user_account.base_open_borrow + get_user_total_debt(user_account, market);
+
+    (user_account.qoute_total / over_collateral_price).saturating_sub(user_total_open_debt)
+}
+
+// Returns health factor as percent, not accurate and not safe for overflows! TODO: make it fp32
+pub fn get_user_health_factor(user_account: &UserAccount, market: &LexMarket, oracle_account: &AccountInfo) -> u64 {
+    let price: u64 = get_qoute_price(&market.oracle_type, &oracle_account).unwrap() as u64; // If price is not present?
+
+    let user_total_open_debt = user_account.base_open_borrow + get_user_total_debt(user_account, market);
+
+    let user_qoute = user_account.qoute_total;
+
+    10000 * user_qoute / (price * user_total_open_debt * (100 + (market.over_collateral_percent+1) as u64 /2))
 }

@@ -47,6 +47,10 @@ pub mod balex {
         processor::order::cancel_my_order(ctx, _bump, order_id)
     }
 
+    pub fn cancel_risky_order(ctx: Context<CancelRiskyOrder>, _bump: u8, order_id: u128) -> ProgramResult {
+        processor::order::cancel_risky_order(ctx, _bump, order_id)
+    }
+
     // withdraw
     // clear debt
     // cancel order

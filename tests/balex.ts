@@ -134,7 +134,6 @@ describe('balex', () => {
     // const oracleType = { pyth: {} }
     // const oraclePubkey = new anchor.web3.PublicKey("GVXRSBjFk6e6J3NbVPXohDJetcTjaeeuykUpbQF8UoMU")
 
-    console.log(program.account.lexMarket.size)
     const tx = await program.rpc.initializeMarket(signerBump, mintBase.publicKey, mintQoute.publicKey, oracleType, {
       accounts: {
         admin: admin.publicKey,
@@ -180,7 +179,7 @@ describe('balex', () => {
   });
 
   it('Invalid deposit', async() => {
-    assert.rejects(
+    await assert.rejects(
       program.rpc.deposit(bobBump, new anchor.BN(10), {
           accounts: {
             owner: bob.publicKey,
@@ -195,7 +194,7 @@ describe('balex', () => {
       )
     );
 
-    assert.rejects(
+    await assert.rejects(
       program.rpc.deposit(bobBump, new anchor.BN(1000000), {
           accounts: {
             owner: bob.publicKey,
@@ -279,7 +278,7 @@ describe('balex', () => {
     let rate = new anchor.BN(4 << 32);
     let qty = new anchor.BN(1000)
     let bidType = 0;
-    assert.rejects(
+    await assert.rejects(
       program.rpc.newOrder(bobBump, bidType, rate, qty, {
         accounts: {
           owner: bob.publicKey,
@@ -316,7 +315,7 @@ describe('balex', () => {
     let order_id = aliceUserAccountData.openOrders[0]
 
     // Ensure bob cannot cancel her order
-    assert.rejects(
+    await assert.rejects(
       program.rpc.cancelMyOrder(bobBump, order_id, {
         accounts: {
           owner: bob.publicKey,
@@ -348,7 +347,7 @@ describe('balex', () => {
     assert.equal(aliceUserAccountData.baseOpenLend, 10); //10 Is already taken by Bob, ready to be consumed
 
     // Ensure cannot cancel invalid order
-    assert.rejects(
+    await assert.rejects(
       program.rpc.cancelMyOrder(aliceBump, order_id, {
         accounts: {
           owner: alice.publicKey,
@@ -362,6 +361,74 @@ describe('balex', () => {
         }, signers: [alice]
       })
     );
+  });
+
+  it('Bob set another order which becomes risky and will be cancelled', async () => {
+    let rate = new anchor.BN(4 << 32);
+    let qty = new anchor.BN(10)
+    let bidType = 0;
+
+    await program.rpc.newOrder(bobBump, bidType, rate, qty, {
+        accounts: {
+          owner: bob.publicKey,
+          userAccount: bobUserAccount,
+          market: lexMarket.publicKey,
+          eventQueue: eventQueue.publicKey,
+          orderbook: orderbook.publicKey,
+          asks: asks.publicKey,
+          bids: bids.publicKey,
+          priceOracle: stubPriceOracle.publicKey,
+          systemProgram: anchor.web3.SystemProgram.programId
+        }, signers: [bob]
+    });
+
+    // Set price to high so it be considered risky
+    // Bob has 20 borrowed in place with 5000 balance
+
+    let bobUserAccountData = await program.account.userAccount.fetch(bobUserAccount);
+
+    let order_id = bobUserAccountData.openOrders[0]
+
+    await assert.rejects(
+      program.rpc.cancelRiskyOrder(bobBump, order_id, {
+            accounts: {
+                owner: bob.publicKey,
+                userAccount: bobUserAccount,
+                market: lexMarket.publicKey,
+                eventQueue: eventQueue.publicKey,
+                orderbook: orderbook.publicKey,
+                asks: asks.publicKey,
+                bids: bids.publicKey,
+                priceOracle: stubPriceOracle.publicKey,
+                systemProgram: anchor.web3.SystemProgram.programId
+            },
+            signers: []
+          })
+    );
+
+    await program.rpc.setStubPrice(new anchor.BN(201), new anchor.BN(10), {
+      accounts: {
+        admin: admin.publicKey,
+        stubPrice: stubPriceOracle.publicKey,
+        systemProgram: anchor.web3.SystemProgram.programId,
+      }, signers: [admin, stubPriceOracle]
+    })
+
+    await program.rpc.cancelRiskyOrder(bobBump, order_id, {
+      accounts: {
+          owner: bob.publicKey,
+          userAccount: bobUserAccount,
+          market: lexMarket.publicKey,
+          eventQueue: eventQueue.publicKey,
+          orderbook: orderbook.publicKey,
+          asks: asks.publicKey,
+          bids: bids.publicKey,
+          priceOracle: stubPriceOracle.publicKey,
+          systemProgram: anchor.web3.SystemProgram.programId
+      },
+      signers: []
+    });
+    
   });
 
 });
