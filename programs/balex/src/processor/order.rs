@@ -269,7 +269,7 @@ pub fn cancel_risky_order(
 
     let order_summary: OrderSummary = read_register(&ctx.accounts.event_queue).unwrap().unwrap();
 
-    user_account.base_open_lend -= order_summary.total_base_qty;
+    user_account.base_open_borrow -= order_summary.total_base_qty;
 
     user_account.remove_order(order_id)?;
 

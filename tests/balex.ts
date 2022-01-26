@@ -55,7 +55,7 @@ describe('balex', () => {
   
 
   it('Is setup!', async () => {
-    [marketSigner, signerBump] = await anchor.web3.PublicKey.findProgramAddress([lexMarket.publicKey.toBuffer()], program.programId)
+    [marketSigner, signerBump] = await anchor.web3.PublicKey.findProgramAddress([lexMarket.publicKey.toBytes()], program.programId)
 
     console.log("Request airdrops");
     await connection.confirmTransaction(await connection.requestAirdrop(admin.publicKey, 10 * anchor.web3.LAMPORTS_PER_SOL));
@@ -332,9 +332,7 @@ describe('balex', () => {
 
   it('Alice cancels remaining of her first order', async () => {
     let aliceUserAccountData = await program.account.userAccount.fetch(aliceUserAccount);
-    console.log(aliceUserAccountData.openOrdersCnt)
     let order_id = aliceUserAccountData.openOrders[0]
-    console.log(order_id);
 
     console.log("Ensure bob cannot cancel her order");
     await assert.rejects(
@@ -455,5 +453,110 @@ describe('balex', () => {
     
   });
 
+  it('Bob withdraws his borrowed debt', async () => {
+    await program.rpc.withdraw(bobBump, new anchor.BN(10), {
+      accounts: {
+        owner: bob.publicKey,
+        userAccount: bobUserAccount,
+        market: lexMarket.publicKey,
+        marketSigner: marketSigner,
+        vault: lexBaseVault,
+        tokenDest: bobAccountBase,
+        priceOracle: stubPriceOracle.publicKey,
+        tokenProgram: spl_token.TOKEN_PROGRAM_ID
+      },
+      signers: [bob]
+    })
+
+    let bobUserAccountData = await program.account.userAccount.fetch(bobUserAccount);
+    assert.equal(bobUserAccountData.baseFree, 0);
+
+    let bobAccountBaseData = await mintBase.getAccountInfo(bobAccountBase)
+    assert.equal(bobAccountBaseData.amount, 10000 + 10)
+
+    await assert.rejects(
+      program.rpc.withdraw(bobBump, new anchor.BN(3000), {
+        accounts: {
+          owner: bob.publicKey,
+          userAccount: bobUserAccount,
+          market: lexMarket.publicKey,
+          marketSigner: marketSigner,
+          vault: lexQuoteVault,
+          tokenDest: bobAccountQuote,
+          priceOracle: stubPriceOracle.publicKey,
+          tokenProgram: spl_token.TOKEN_PROGRAM_ID
+        },
+        signers: [bob]
+      })
+    )
+  });
+
+  it('Liquidation of Bob debts', async () => {
+    await program.rpc.setStubPrice(new anchor.BN(405), new anchor.BN(10), {
+      accounts: {
+        admin: admin.publicKey,
+        stubPrice: stubPriceOracle.publicKey,
+        systemProgram: anchor.web3.SystemProgram.programId,
+      }, signers: [admin, stubPriceOracle]
+    })
+
+    await program.rpc.liquidateDebts([new anchor.BN(0)], [new anchor.BN(4)], {
+      accounts: {
+        liquidator: alice.publicKey,
+        tokenBaseSrc: aliceAccountBase,
+        tokenQuoteDest: aliceAccountQuote,
+        baseVault: lexBaseVault,
+        quoteVault: lexQuoteVault,
+        marketSigner: marketSigner,
+        borrowerAccount: bobUserAccount,
+        priceOracle: stubPriceOracle.publicKey,
+        market: lexMarket.publicKey,
+        tokenProgram: spl_token.TOKEN_PROGRAM_ID
+      },
+      signers: [alice],
+      remainingAccounts: [
+        {pubkey: aliceUserAccount, isSigner: false, isWritable: true}
+      ]
+    })
+
+    let aliceAccountQuoteData = await mintQuote.getAccountInfo(aliceAccountQuote)
+    assert.equal(aliceAccountQuoteData.amount, 10000 + 1669)
+  });
+
+  it('Bob deposits remaining back and settles his debt', async () => {
+    await assert.rejects(
+      program.rpc.settleDebt(bobBump, 0, {
+        accounts: {
+          owner: bob.publicKey,
+          borrowerAccount: bobUserAccount,
+          lenderAccount: aliceUserAccount,
+          market: lexMarket.publicKey
+        },
+        signers: [bob]
+      })
+    );
+
+    await program.rpc.deposit(bobBump, new anchor.BN(6), {
+      accounts: {
+        owner: bob.publicKey,
+        userAccount: bobUserAccount,
+        market: lexMarket.publicKey,
+        vault: lexBaseVault,
+        tokenSource: bobAccountBase,
+        tokenProgram: spl_token.TOKEN_PROGRAM_ID
+      },
+      signers: [bob]
+    });
+
+    await program.rpc.settleDebt(bobBump, 0, {
+      accounts: {
+        owner: bob.publicKey,
+        borrowerAccount: bobUserAccount,
+        lenderAccount: aliceUserAccount,
+        market: lexMarket.publicKey
+      },
+      signers: [bob]
+    });
+  });
 
 });

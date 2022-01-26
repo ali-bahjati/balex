@@ -58,9 +58,18 @@ pub mod balex {
         processor::order::consume_order_events(ctx, max_iterations)
     }
 
-    // withdraw
-    // clear debt
-    // liquiditate
+
+    pub fn withdraw(ctx: Context<Withdraw>, _bump: u8, amount: u64) -> ProgramResult {
+        processor::account::withdraw(ctx, _bump, amount)
+    }
+
+    pub fn settle_debt(ctx: Context<SettleDebt>, _bump: u8, debt_id: u16) -> ProgramResult {
+        processor::debt::settle_debt(ctx, _bump, debt_id)
+    }
+
+    pub fn liquidate_debts(ctx: Context<LiquidateDebts>, debts_id: Vec<u16>, debts_amount: Vec<u64>) -> ProgramResult {
+        processor::debt::liquidate_debts(ctx, debts_id, debts_amount)
+    }
 
     // close account?
     // close market?

@@ -31,7 +31,17 @@ pub struct Debt {
     pub borrower: Pubkey,
     pub timestamp: i64, //Used to calculate return interest 
     pub interest_rate: u64, //fp32
-    pub qty: u64 //If zero it means it's empty
+    pub qty: u64, //If zero it means it's empty debt
+    pub liquid_qty: u64,
+}
+
+impl Debt {
+    pub fn get_debt_as_of_now(self: &Self) -> u64 {
+        let diff_timestamp = (Clock::get().unwrap().unix_timestamp - self.timestamp) as u64;
+        let profit_rate: f64 = (self.interest_rate * diff_timestamp) as f64 / (60.*60.);
+
+        (self.qty as f64 * (1. + profit_rate)).round() as u64 - self.liquid_qty
+    }
 }
 
 
@@ -100,6 +110,17 @@ impl UserAccount {
         }
         return Err(ProgramError::InvalidArgument);
     }
+    pub fn remove_debt(self: &mut Self, debt_id: u16) -> ProgramResult {
+        for i in 0..self.open_debts_cnt as usize {
+            if self.open_debts[i] == debt_id {
+                self.open_debts[i] = self.open_debts[self.open_debts_cnt as usize - 1];
+                self.open_debts[self.open_debts_cnt as usize - 1] = 0;
+                self.open_debts_cnt -= 1;
+                return Ok(());
+            }
+        }
+        return Err(ProgramError::InvalidArgument);
+    }
 }
 
 pub fn get_quote_price(oracle_type: &OracleType, oracle_account: &AccountInfo) -> Option<i64> {
@@ -127,10 +148,7 @@ pub fn get_user_total_debt(user_account: &UserAccount, market: &LexMarket) -> u6
         let debt: &Debt = &market.debts[debt_id];
 
         if debt.borrower == user_account.owner {
-            let diff_timestamp = (Clock::get().unwrap().unix_timestamp - debt.timestamp) as u64;
-            let profit_rate: f64 = (debt.interest_rate * diff_timestamp) as f64 / (60.*60.);
-            let debt_as_of_now: u64 = (debt.qty as f64 * (1. + profit_rate)).round() as u64;
-            total_debt += debt_as_of_now;
+            total_debt += debt.get_debt_as_of_now();
         }
     }
 
@@ -165,8 +183,9 @@ pub fn create_debt(qty: u64, interest_rate: u64, lender: &mut UserAccount, borro
                 lender: lender.owner,
                 borrower: borrower.owner,
                 timestamp: Clock::get().unwrap().unix_timestamp,
+                interest_rate,
                 qty,
-                interest_rate
+                liquid_qty: 0,
             };
 
             lender.open_debts[lender.open_debts_cnt as usize] = i as u16;
