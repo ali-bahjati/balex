@@ -311,4 +311,57 @@ describe('balex', () => {
       });
   });
 
+  it('Alice cancels remaining of her first order', async () => {
+    let aliceUserAccountData = await program.account.userAccount.fetch(aliceUserAccount);
+    let order_id = aliceUserAccountData.openOrders[0]
+
+    // Ensure bob cannot cancel her order
+    assert.rejects(
+      program.rpc.cancelMyOrder(bobBump, order_id, {
+        accounts: {
+          owner: bob.publicKey,
+          userAccount: bobUserAccount,
+          market: lexMarket.publicKey,
+          eventQueue: eventQueue.publicKey,
+          orderbook: orderbook.publicKey,
+          asks: asks.publicKey,
+          bids: bids.publicKey,
+          systemProgram: anchor.web3.SystemProgram.programId
+        }, signers: [bob]
+      })
+    );
+
+    await program.rpc.cancelMyOrder(aliceBump, order_id, {
+      accounts: {
+        owner: alice.publicKey,
+        userAccount: aliceUserAccount,
+        market: lexMarket.publicKey,
+        eventQueue: eventQueue.publicKey,
+        orderbook: orderbook.publicKey,
+        asks: asks.publicKey,
+        bids: bids.publicKey,
+        systemProgram: anchor.web3.SystemProgram.programId
+      }, signers: [alice]
+    });
+
+    aliceUserAccountData = await program.account.userAccount.fetch(aliceUserAccount);
+    assert.equal(aliceUserAccountData.baseOpenLend, 10); //10 Is already taken by Bob, ready to be consumed
+
+    // Ensure cannot cancel invalid order
+    assert.rejects(
+      program.rpc.cancelMyOrder(aliceBump, order_id, {
+        accounts: {
+          owner: alice.publicKey,
+          userAccount: aliceUserAccount,
+          market: lexMarket.publicKey,
+          eventQueue: eventQueue.publicKey,
+          orderbook: orderbook.publicKey,
+          asks: asks.publicKey,
+          bids: bids.publicKey,
+          systemProgram: anchor.web3.SystemProgram.programId
+        }, signers: [alice]
+      })
+    );
+  });
+
 });

@@ -28,9 +28,9 @@ pub struct StubPrice {
 pub struct Debt {
     pub lender: Pubkey,
     pub borrower: Pubkey,
-    pub timestamp: i64,
+    pub timestamp: i64, //Used to calculate return interest 
     pub interest_rate: u64,
-    pub qty: u64
+    pub qty: u64 //If zero it means it's empty
 }
 
 
@@ -68,17 +68,36 @@ pub struct UserAccount {
     pub owner: Pubkey,
     pub market: Pubkey,
 
-    pub base_free: u64, // includes borrowed ones
-    pub base_locked: u64, // given to lend
-    pub base_borrowed: u64, // total borrowed base
+    pub base_free: u64, // Includes borrowed ones
+    pub base_locked: u64, // Given to lend
+    pub base_open_lend: u64, // Total base given which is still open
 
-    pub qoute_total: u64, // amount of locked is dynamic per time
+    pub base_borrowed: u64, // Total borrowed base
+    pub base_open_borrow: u64, // Total base requested which is open order now 
+
+    pub qoute_total: u64, // amount of locked is dynamic per time as price of borrowed collaterals can change
 
     pub open_orders_cnt: u8,
+
+    pub open_debts_cnt: u8,
 
     pub open_orders: [u128; USER_OPEN_ORDERS_SIZE], // TODO: Make length adjustable, also user orderId
     // debts:
     pub open_debts: [u16; USER_OPEN_DEBTS_SIZE] // TODO: Make length adjustable
+}
+
+impl UserAccount {
+    pub fn remove_order(self: &mut Self, order_id: u128) -> ProgramResult {
+        for i in 0..self.open_orders_cnt as usize {
+            if self.open_orders[i] == order_id {
+                self.open_orders[i] = self.open_orders[self.open_orders_cnt as usize - 1];
+                self.open_orders[self.open_orders_cnt as usize - 1] = 0;
+                self.open_orders_cnt -= 1;
+                return Ok(());
+            }
+        }
+        return Err(ProgramError::InvalidArgument);
+    }
 }
 
 pub fn get_qoute_price(oracle_type: &OracleType, oracle_account: &AccountInfo) -> Option<i64> {
@@ -104,5 +123,5 @@ pub fn get_max_borrow_qty(user_account: &UserAccount, market: &LexMarket, oracle
 
     let over_collateral_price = price * (100 + market.over_collateral_percent as u64 + 99) / 100; // Overflow?
 
-    user_account.qoute_total / over_collateral_price
+    (user_account.qoute_total / over_collateral_price).saturating_sub(user_account.base_open_borrow)
 }
