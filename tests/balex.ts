@@ -13,10 +13,10 @@ describe('balex', () => {
   const program = anchor.workspace.Balex as Program<Balex>;
   const connection = provider.connection;
 
-  // Mints, assume base is USD and qoute is BTC
+  // Mints, assume base is USD and quote is BTC
 
   let mintBase: spl_token.Token;
-  let mintQoute: spl_token.Token;
+  let mintQuote: spl_token.Token;
 
   let stubPriceOracle = anchor.web3.Keypair.generate();
 
@@ -36,7 +36,7 @@ describe('balex', () => {
   let signerBump: number;
 
   let lexBaseVault: anchor.web3.PublicKey;
-  let lexQouteVault: anchor.web3.PublicKey;
+  let lexQuoteVault: anchor.web3.PublicKey;
 
   // Alice and Bob are used for simulating what happens in the program
 
@@ -44,9 +44,9 @@ describe('balex', () => {
   let bob = anchor.web3.Keypair.generate();
 
   let aliceAccountBase: anchor.web3.PublicKey;
-  let aliceAccountQoute: anchor.web3.PublicKey;
+  let aliceAccountQuote: anchor.web3.PublicKey;
   let bobAccountBase: anchor.web3.PublicKey;
-  let bobAccountQoute: anchor.web3.PublicKey;
+  let bobAccountQuote: anchor.web3.PublicKey;
 
   let aliceUserAccount: anchor.web3.PublicKey;
   let aliceBump: number;
@@ -61,29 +61,30 @@ describe('balex', () => {
     await connection.confirmTransaction(await connection.requestAirdrop(admin.publicKey, 10 * anchor.web3.LAMPORTS_PER_SOL));
     await connection.confirmTransaction(await connection.requestAirdrop(alice.publicKey, 10 * anchor.web3.LAMPORTS_PER_SOL));
     await connection.confirmTransaction(await connection.requestAirdrop(bob.publicKey, 10 * anchor.web3.LAMPORTS_PER_SOL));
+    await connection.confirmTransaction(await connection.requestAirdrop(provider.wallet.publicKey, 20 * anchor.web3.LAMPORTS_PER_SOL));
 
     console.log("Create mints");
     mintBase = await spl_token.Token.createMint(connection, admin, admin.publicKey, admin.publicKey, 0, spl_token.TOKEN_PROGRAM_ID);
-    mintQoute = await spl_token.Token.createMint(connection, admin, admin.publicKey, admin.publicKey, 0, spl_token.TOKEN_PROGRAM_ID);
+    mintQuote = await spl_token.Token.createMint(connection, admin, admin.publicKey, admin.publicKey, 0, spl_token.TOKEN_PROGRAM_ID);
 
     console.log("Create token accounts");
     aliceAccountBase = await mintBase.createAssociatedTokenAccount(alice.publicKey);
     await mintBase.mintTo(aliceAccountBase, admin, [], 10000);
-    aliceAccountQoute = await mintQoute.createAssociatedTokenAccount(alice.publicKey);
-    await mintQoute.mintTo(aliceAccountQoute, admin, [], 10000);
+    aliceAccountQuote = await mintQuote.createAssociatedTokenAccount(alice.publicKey);
+    await mintQuote.mintTo(aliceAccountQuote, admin, [], 10000);
 
     bobAccountBase = await mintBase.createAssociatedTokenAccount(bob.publicKey);
     await mintBase.mintTo(bobAccountBase, admin, [], 10000);
-    bobAccountQoute = await mintQoute.createAssociatedTokenAccount(bob.publicKey);
-    await mintQoute.mintTo(bobAccountQoute, admin, [], 10000);
+    bobAccountQuote = await mintQuote.createAssociatedTokenAccount(bob.publicKey);
+    await mintQuote.mintTo(bobAccountQuote, admin, [], 10000);
 
     lexBaseVault = await mintBase.createAccount(marketSigner); // TODO: Investigate why associated token account didn't work
-    lexQouteVault = await mintQoute.createAccount(marketSigner); 
+    lexQuoteVault = await mintQuote.createAccount(marketSigner); 
 
     assert.equal((await mintBase.getAccountInfo(aliceAccountBase)).amount, 10000);
-    assert.equal((await mintQoute.getAccountInfo(aliceAccountQoute)).amount, 10000);
+    assert.equal((await mintQuote.getAccountInfo(aliceAccountQuote)).amount, 10000);
     assert.equal((await mintBase.getAccountInfo(bobAccountBase)).amount, 10000);
-    assert.equal((await mintQoute.getAccountInfo(bobAccountQoute)).amount, 10000);
+    assert.equal((await mintQuote.getAccountInfo(bobAccountQuote)).amount, 10000);
   });
 
   it('Market is initialized!', async () => {
@@ -134,12 +135,12 @@ describe('balex', () => {
     // const oracleType = { pyth: {} }
     // const oraclePubkey = new anchor.web3.PublicKey("GVXRSBjFk6e6J3NbVPXohDJetcTjaeeuykUpbQF8UoMU")
 
-    const tx = await program.rpc.initializeMarket(signerBump, mintBase.publicKey, mintQoute.publicKey, oracleType, {
+    const tx = await program.rpc.initializeMarket(signerBump, mintBase.publicKey, mintQuote.publicKey, oracleType, {
       accounts: {
         admin: admin.publicKey,
         market: lexMarket.publicKey,
         baseVault: lexBaseVault,
-        qouteVault: lexQouteVault,
+        quoteVault: lexQuoteVault,
         eventQueue: eventQueue.publicKey,
         orderbook: orderbook.publicKey,
         priceOracle: oraclePubkey,
@@ -186,7 +187,7 @@ describe('balex', () => {
             userAccount: bobUserAccount,
             market: lexMarket.publicKey,
             vault: aliceAccountBase,
-            tokenSource: bobAccountQoute,
+            tokenSource: bobAccountQuote,
             tokenProgram: spl_token.TOKEN_PROGRAM_ID
           },
           signers: [bob]
@@ -200,8 +201,8 @@ describe('balex', () => {
             owner: bob.publicKey,
             userAccount: bobUserAccount,
             market: lexMarket.publicKey,
-            vault: lexQouteVault,
-            tokenSource: bobAccountQoute,
+            vault: lexQuoteVault,
+            tokenSource: bobAccountQuote,
             tokenProgram: spl_token.TOKEN_PROGRAM_ID
           },
           signers: [bob]
@@ -243,23 +244,24 @@ describe('balex', () => {
         owner: bob.publicKey,
         userAccount: bobUserAccount,
         market: lexMarket.publicKey,
-        vault: lexQouteVault,
-        tokenSource: bobAccountQoute,
+        vault: lexQuoteVault,
+        tokenSource: bobAccountQuote,
         tokenProgram: spl_token.TOKEN_PROGRAM_ID
       },
       signers: [bob]
     });
 
-    assert.equal((await mintQoute.getAccountInfo(lexQouteVault)).amount, 5000);
+    assert.equal((await mintQuote.getAccountInfo(lexQuoteVault)).amount, 5000);
     assert.equal((await program.account.userAccount.fetch(bobUserAccount)).baseFree.toNumber(), 0);
-    assert.equal((await program.account.userAccount.fetch(bobUserAccount)).qouteTotal.toNumber(), 5000);
+    assert.equal((await program.account.userAccount.fetch(bobUserAccount)).quoteTotal.toNumber(), 5000);
   });
 
   it('Alice creates Ask order', async () => {
-    let rate = new anchor.BN(3 << 32);
+    let rate = new anchor.BN(3);
     let qty = new anchor.BN(30)
     let askType = 1;
     await program.rpc.newOrder(aliceBump, askType, rate, qty, {
+
       accounts: {
         owner: alice.publicKey,
         userAccount: aliceUserAccount,
@@ -272,10 +274,13 @@ describe('balex', () => {
         systemProgram: anchor.web3.SystemProgram.programId
       }, signers: [alice]
     });
+
+    let aliceUserAccountData = await program.account.userAccount.fetch(aliceUserAccount);
+    assert.equal(aliceUserAccountData.openOrdersCnt, 1);
   });
 
   it('Bob creates Bid order', async () => {
-    let rate = new anchor.BN(4 << 32);
+    let rate = new anchor.BN(4);
     let qty = new anchor.BN(1000)
     let bidType = 0;
     await assert.rejects(
@@ -310,11 +315,28 @@ describe('balex', () => {
       });
   });
 
+  it('Wallet owner consumes events', async () => {
+    await program.rpc.consumeOrderEvents(new anchor.BN(10), {
+      accounts: {
+        market: lexMarket.publicKey,
+        eventQueue: eventQueue.publicKey,
+        orderbook: orderbook.publicKey,
+        systemProgram: anchor.web3.SystemProgram.programId
+      },
+      remainingAccounts: [
+        {pubkey: aliceUserAccount, isSigner: false, isWritable: true},
+        {pubkey: bobUserAccount, isSigner: false, isWritable: true},
+      ]
+    });
+  });
+
   it('Alice cancels remaining of her first order', async () => {
     let aliceUserAccountData = await program.account.userAccount.fetch(aliceUserAccount);
+    console.log(aliceUserAccountData.openOrdersCnt)
     let order_id = aliceUserAccountData.openOrders[0]
+    console.log(order_id);
 
-    // Ensure bob cannot cancel her order
+    console.log("Ensure bob cannot cancel her order");
     await assert.rejects(
       program.rpc.cancelMyOrder(bobBump, order_id, {
         accounts: {
@@ -330,6 +352,7 @@ describe('balex', () => {
       })
     );
 
+    console.log("Cancelling order");
     await program.rpc.cancelMyOrder(aliceBump, order_id, {
       accounts: {
         owner: alice.publicKey,
@@ -344,9 +367,9 @@ describe('balex', () => {
     });
 
     aliceUserAccountData = await program.account.userAccount.fetch(aliceUserAccount);
-    assert.equal(aliceUserAccountData.baseOpenLend, 10); //10 Is already taken by Bob, ready to be consumed
+    assert.equal(aliceUserAccountData.baseOpenLend, 10); 
 
-    // Ensure cannot cancel invalid order
+    console.log("Ensure cannot cancel order twice");
     await assert.rejects(
       program.rpc.cancelMyOrder(aliceBump, order_id, {
         accounts: {
@@ -362,6 +385,7 @@ describe('balex', () => {
       })
     );
   });
+
 
   it('Bob set another order which becomes risky and will be cancelled', async () => {
     let rate = new anchor.BN(4 << 32);
@@ -430,5 +454,6 @@ describe('balex', () => {
     });
     
   });
+
 
 });

@@ -35,14 +35,15 @@ pub struct Debt {
 }
 
 
+
 pub const TOTAL_OPEN_DEBTS_SIZE: usize = 256;
 
 #[account(zero_copy)]
 pub struct LexMarket {
     pub base_mint: Pubkey,
-    pub qoute_mint: Pubkey,
+    pub quote_mint: Pubkey,
     pub base_vault: Pubkey,
-    pub qoute_vault: Pubkey,
+    pub quote_vault: Pubkey,
 
     pub price_oracle: Pubkey,
 
@@ -72,10 +73,9 @@ pub struct UserAccount {
     pub base_locked: u64, // Given to lend
     pub base_open_lend: u64, // Total base given which is still open
 
-    pub base_borrowed: u64, // Total borrowed base
     pub base_open_borrow: u64, // Total base requested which is open order now 
 
-    pub qoute_total: u64, // amount of locked is dynamic per time as price of borrowed collaterals can change
+    pub quote_total: u64, // amount of locked is dynamic per time as price of borrowed collaterals can change
 
     pub open_orders: [u128; USER_OPEN_ORDERS_SIZE], // TODO: Make length adjustable, also user orderId
     // debts:
@@ -102,7 +102,7 @@ impl UserAccount {
     }
 }
 
-pub fn get_qoute_price(oracle_type: &OracleType, oracle_account: &AccountInfo) -> Option<i64> {
+pub fn get_quote_price(oracle_type: &OracleType, oracle_account: &AccountInfo) -> Option<i64> {
     match oracle_type {
         OracleType::Pyth => {
             let price_data = oracle_account.try_borrow_data().unwrap();
@@ -127,9 +127,8 @@ pub fn get_user_total_debt(user_account: &UserAccount, market: &LexMarket) -> u6
         let debt: &Debt = &market.debts[debt_id];
 
         if debt.borrower == user_account.owner {
-            // let diff_timestamp = (Clock::get().unwrap().unix_timestamp - debt.timestamp) as u64;
-            // let profit_rate: f64 = (debt.interest_rate * diff_timestamp) as f64 / (60.*60.);
-            let profit_rate: f64 = 1.; // TODO: Handle fp32 correctly
+            let diff_timestamp = (Clock::get().unwrap().unix_timestamp - debt.timestamp) as u64;
+            let profit_rate: f64 = (debt.interest_rate * diff_timestamp) as f64 / (60.*60.);
             let debt_as_of_now: u64 = (debt.qty as f64 * (1. + profit_rate)).round() as u64;
             total_debt += debt_as_of_now;
         }
@@ -139,22 +138,53 @@ pub fn get_user_total_debt(user_account: &UserAccount, market: &LexMarket) -> u6
 }
 
 pub fn get_max_borrow_qty(user_account: &UserAccount, market: &LexMarket, oracle_account: &AccountInfo) -> u64 {
-    let price: u64 = get_qoute_price(&market.oracle_type, &oracle_account).unwrap() as u64; // If price is not present?
+    let price: u64 = get_quote_price(&market.oracle_type, &oracle_account).unwrap() as u64; // If price is not present?
 
-    let over_collateral_price = price * (100 + market.over_collateral_percent as u64 + 99) / 100; // Overflow?
+    let over_collateral_price = (price * (100 + market.over_collateral_percent as u64) + 99) / 100; // Overflow?
 
     let user_total_open_debt = user_account.base_open_borrow + get_user_total_debt(user_account, market);
 
-    (user_account.qoute_total / over_collateral_price).saturating_sub(user_total_open_debt)
+    (user_account.quote_total / over_collateral_price).saturating_sub(user_total_open_debt)
 }
 
 // Returns health factor as percent, not accurate and not safe for overflows! TODO: make it fp32
 pub fn get_user_health_factor(user_account: &UserAccount, market: &LexMarket, oracle_account: &AccountInfo) -> u64 {
-    let price: u64 = get_qoute_price(&market.oracle_type, &oracle_account).unwrap() as u64; // If price is not present?
+    let price: u64 = get_quote_price(&market.oracle_type, &oracle_account).unwrap() as u64; // If price is not present?
 
     let user_total_open_debt = user_account.base_open_borrow + get_user_total_debt(user_account, market);
 
-    let user_qoute = user_account.qoute_total;
+    let user_quote = user_account.quote_total;
 
-    10000 * user_qoute / (price * user_total_open_debt * (100 + (market.over_collateral_percent+1) as u64 /2))
+    10000 * user_quote / (price * user_total_open_debt * (100 + (market.over_collateral_percent+1) as u64 /2))
+}
+
+pub fn create_debt(qty: u64, interest_rate: u64, lender: &mut UserAccount, borrower: &mut UserAccount, market: &mut LexMarket) -> ProgramResult {
+    for i in 0..TOTAL_OPEN_DEBTS_SIZE {
+        if market.debts[i].qty == 0 {
+            market.debts[i] = Debt {
+                lender: lender.owner,
+                borrower: borrower.owner,
+                timestamp: Clock::get().unwrap().unix_timestamp,
+                qty,
+                interest_rate
+            };
+
+            lender.open_debts[lender.open_debts_cnt as usize] = i as u16;
+            lender.open_debts_cnt += 1;
+
+            borrower.open_debts[borrower.open_debts_cnt as usize] = i as u16;
+            borrower.open_debts_cnt += 1;
+
+            borrower.base_free += qty;
+            borrower.base_open_borrow -= qty;
+
+            lender.base_locked += qty;
+            lender.base_free -= qty;
+
+            msg!("Successfully created a debt of {} with interest {} between {} and {}", qty, interest_rate, lender.owner, borrower.owner);
+            return Ok(())
+        }
+    }
+    msg!("Debts are full!");
+    Err(ProgramError::Custom(0))
 }

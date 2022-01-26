@@ -17,10 +17,10 @@ pub mod balex {
         ctx: Context<InitializeMarket>,
         signer_bump: u8,
         base_mint: Pubkey,
-        qoute_mint: Pubkey,
+        quote_mint: Pubkey,
         oracle_type: OracleType,
     ) -> ProgramResult {
-        processor::market::initialize_market(ctx, signer_bump, base_mint, qoute_mint, oracle_type)
+        processor::market::initialize_market(ctx, signer_bump, base_mint, quote_mint, oracle_type)
     }
 
     pub fn initialize_account(
@@ -51,10 +51,15 @@ pub mod balex {
         processor::order::cancel_risky_order(ctx, _bump, order_id)
     }
 
+    pub fn consume_order_events(
+        ctx: Context<ConsumerOrderEvents>,
+        max_iterations: u64,
+    ) -> ProgramResult {
+        processor::order::consume_order_events(ctx, max_iterations)
+    }
+
     // withdraw
     // clear debt
-    // cancel order
-    // consume events
     // liquiditate
 
     // close account?

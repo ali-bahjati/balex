@@ -57,10 +57,10 @@ pub fn deposit(ctx: Context<Deposit>, _bump: u8, amount: u64) -> ProgramResult {
 
     if ctx.accounts.vault.key() == market.base_vault {
         user_account.base_free += amount;
-    } else if ctx.accounts.vault.key() == market.qoute_vault {
-        user_account.qoute_total += amount;
+    } else if ctx.accounts.vault.key() == market.quote_vault {
+        user_account.quote_total += amount;
     } else {
-        msg!("Vault address is not base nor qoute vault of the market");
+        msg!("Vault address is not base nor quote vault of the market");
         return Err(ProgramError::InvalidAccountData);
     }    transfer(
         CpiContext::new(

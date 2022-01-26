@@ -15,7 +15,7 @@ pub struct InitializeMarket<'info> {
     pub base_vault: Account<'info, TokenAccount>,
 
     #[account()]
-    pub qoute_vault: Account<'info, TokenAccount>,
+    pub quote_vault: Account<'info, TokenAccount>,
 
     #[account(mut)]
     pub event_queue: AccountInfo<'info>,
@@ -40,17 +40,17 @@ pub fn initialize_market(
     ctx: Context<InitializeMarket>,
     signer_bump: u8,
     base_mint: Pubkey,
-    qoute_mint: Pubkey,
+    quote_mint: Pubkey,
     oracle_type: OracleType,
 ) -> ProgramResult {
     let mut market = ctx.accounts.market.load_init()?;
 
     market.admin = ctx.accounts.admin.key();
     market.base_mint = base_mint;
-    market.qoute_mint = qoute_mint;
+    market.quote_mint = quote_mint;
 
     market.base_vault = ctx.accounts.base_vault.key();
-    market.qoute_vault = ctx.accounts.qoute_vault.key();
+    market.quote_vault = ctx.accounts.quote_vault.key();
 
     market.signer_bump = signer_bump;
 
