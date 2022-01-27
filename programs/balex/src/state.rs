@@ -77,7 +77,6 @@ pub const USER_OPEN_DEBTS_SIZE: usize = 16;
 #[account(zero_copy)]
 pub struct UserAccount {
     pub owner: Pubkey,
-    pub market: Pubkey,
 
     pub base_free: u64, // Includes borrowed ones
     pub base_locked: u64, // Given to lend
@@ -128,10 +127,11 @@ pub fn get_quote_price(oracle_type: &OracleType, oracle_account: &AccountInfo) -
         OracleType::Pyth => {
             let price_data = oracle_account.try_borrow_data().unwrap();
             let price = load_price(*price_data).unwrap();
-            match price.agg.status {
-               PriceStatus::Trading => Some(price.agg.price),
-               _ => Some(price.agg.price) // Change to a safe behavior
-            }
+            // match price.agg.status {
+            //    PriceStatus::Trading => Some(price.agg.price),
+            //    _ => Some(price.agg.price) // Change to a safe behavior
+            // }
+            Some(price.agg.price / (10 as i64).pow(price.expo as u32))
         },
         OracleType::Stub => {
             let price: Account<StubPrice> = Account::try_from(&oracle_account).unwrap();
@@ -170,6 +170,10 @@ pub fn get_user_health_factor(user_account: &UserAccount, market: &LexMarket, or
     let price: u64 = get_quote_price(&market.oracle_type, &oracle_account).unwrap() as u64; // If price is not present?
 
     let user_total_open_debt = user_account.base_open_borrow + get_user_total_debt(user_account, market);
+
+    if user_total_open_debt == 0 {
+        return 100;
+    }
 
     let user_quote = user_account.quote_total;
 

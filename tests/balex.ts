@@ -157,22 +157,24 @@ describe('balex', () => {
   });
 
   it('Initialize user accounts', async () => {
-    [aliceUserAccount, aliceBump] = await anchor.web3.PublicKey.findProgramAddress([alice.publicKey.toBuffer()], program.programId);
-    [bobUserAccount, bobBump] = await anchor.web3.PublicKey.findProgramAddress([bob.publicKey.toBuffer()], program.programId);
+    [aliceUserAccount, aliceBump] = await anchor.web3.PublicKey.findProgramAddress([lexMarket.publicKey.toBuffer(), alice.publicKey.toBuffer()], program.programId);
+    [bobUserAccount, bobBump] = await anchor.web3.PublicKey.findProgramAddress([lexMarket.publicKey.toBuffer(), bob.publicKey.toBuffer()], program.programId);
 
-    await program.rpc.initializeAccount(aliceBump, lexMarket.publicKey, {
+    await program.rpc.initializeAccount(aliceBump, {
       accounts: {
         userAccount: aliceUserAccount,
         owner: alice.publicKey,
+        market: lexMarket.publicKey,
         systemProgram: anchor.web3.SystemProgram.programId
       },
       signers: [alice]
     });
 
-    await program.rpc.initializeAccount(bobBump, lexMarket.publicKey, {
+    await program.rpc.initializeAccount(bobBump, {
       accounts: {
         userAccount: bobUserAccount,
         owner: bob.publicKey,
+        market: lexMarket.publicKey,
         systemProgram: anchor.web3.SystemProgram.programId
       },
       signers: [bob]

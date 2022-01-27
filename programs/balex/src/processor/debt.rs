@@ -12,7 +12,7 @@ pub struct SettleDebt<'info> {
     #[account(mut)]
     pub owner: Signer<'info>,
 
-    #[account(mut, seeds=[&owner.key().to_bytes()], bump=_bump)]
+    #[account(mut, seeds=[&market.key().to_bytes(), &owner.key().to_bytes()], bump=_bump)]
     pub borrower_account: AccountLoader<'info, UserAccount>,
 
     #[account(mut)]

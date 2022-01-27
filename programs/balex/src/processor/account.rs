@@ -9,7 +9,10 @@ pub struct InitializeAccount<'info> {
     #[account(mut)]
     pub owner: Signer<'info>,
 
-    #[account(init, payer=owner, space = 8 + std::mem::size_of::<UserAccount>(), seeds=[&owner.key().to_bytes()], bump=_bump)]
+    #[account()]
+    pub market: AccountLoader<'info, LexMarket>,
+
+    #[account(init, payer=owner, space = 8 + std::mem::size_of::<UserAccount>(), seeds=[&market.key().to_bytes(), &owner.key().to_bytes()], bump=_bump)]
     pub user_account: AccountLoader<'info, UserAccount>,
 
     #[account()]
@@ -22,7 +25,7 @@ pub struct Deposit<'info> {
     #[account(mut)]
     pub owner: Signer<'info>,
 
-    #[account(mut, seeds=[&owner.key().to_bytes()], bump=_bump)]
+    #[account(mut, seeds=[&market.key().to_bytes(), &owner.key().to_bytes()], bump=_bump)]
     // TODO: If it's gonna be per market also add market here
     pub user_account: AccountLoader<'info, UserAccount>,
 
@@ -42,12 +45,10 @@ pub struct Deposit<'info> {
 pub fn initialize_account(
     ctx: Context<InitializeAccount>,
     _bump: u8,
-    market: Pubkey,
 ) -> ProgramResult {
     let mut user_account = ctx.accounts.user_account.load_init()?;
 
     user_account.owner = ctx.accounts.owner.key();
-    user_account.market = market;
 
     Ok(())
 }
@@ -87,7 +88,7 @@ pub struct Withdraw<'info> {
     #[account(mut)]
     pub owner: Signer<'info>,
 
-    #[account(mut, seeds=[&owner.key().to_bytes()], bump=_bump)]
+    #[account(mut, seeds=[&market.key().to_bytes(), &owner.key().to_bytes()], bump=_bump)]
     // TODO: If it's gonna be per market also add market here
     pub user_account: AccountLoader<'info, UserAccount>,
 

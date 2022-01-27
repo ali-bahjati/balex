@@ -17,10 +17,10 @@ pub struct NewOrder<'info> {
     #[account(mut)]
     pub owner: Signer<'info>,
 
-    #[account(mut, seeds=[&owner.key().to_bytes()], bump=_bump)]
+    #[account(mut, seeds=[&market.key().to_bytes(), &owner.key().to_bytes()], bump=_bump)]
     pub user_account: AccountLoader<'info, UserAccount>,
 
-    #[account(mut)]
+    #[account(mut, has_one=orderbook)]
     pub market: AccountLoader<'info, LexMarket>,
 
     #[account(mut)]
@@ -135,10 +135,10 @@ pub struct CancelMyOrder<'info> {
     #[account(mut)]
     pub owner: Signer<'info>,
 
-    #[account(mut, seeds=[&owner.key().to_bytes()], bump=_bump)]
+    #[account(mut, seeds=[&market.key().to_bytes(), &owner.key().to_bytes()], bump=_bump)]
     pub user_account: AccountLoader<'info, UserAccount>,
 
-    #[account(mut)]
+    #[account(mut, has_one=orderbook)]
     pub market: AccountLoader<'info, LexMarket>, // Will be used later to aggregate total informations
 
     #[account(mut)]
@@ -201,10 +201,10 @@ pub struct CancelRiskyOrder<'info> {
     #[account(mut)]
     pub owner: AccountInfo<'info>,
 
-    #[account(mut, seeds=[&owner.key().to_bytes()], bump=_bump)]
+    #[account(mut, seeds=[&market.key().to_bytes(), &owner.key().to_bytes()], bump=_bump)]
     pub user_account: AccountLoader<'info, UserAccount>,
 
-    #[account(mut)]
+    #[account(mut, has_one=orderbook)]
     pub market: AccountLoader<'info, LexMarket>,
 
     #[account(mut)]
@@ -280,7 +280,7 @@ pub fn cancel_risky_order(
 #[derive(Accounts)]
 #[instruction(_bump: u8)]
 pub struct ConsumerOrderEvents<'info> {
-    #[account(mut)]
+    #[account(mut, has_one=orderbook)]
     pub market: AccountLoader<'info, LexMarket>, // Will be used later to aggregate total informations
 
     #[account(mut)]

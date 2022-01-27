@@ -26,9 +26,8 @@ pub mod balex {
     pub fn initialize_account(
         ctx: Context<InitializeAccount>,
         _bump: u8,
-        market: Pubkey,
     ) -> ProgramResult {
-        processor::account::initialize_account(ctx, _bump, market)
+        processor::account::initialize_account(ctx, _bump)
     }
 
     pub fn deposit(ctx: Context<Deposit>, _bump: u8, amount: u64) -> ProgramResult {
