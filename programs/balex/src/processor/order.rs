@@ -291,7 +291,7 @@ pub struct ConsumerOrderEvents<'info> {
     pub orderbook: AccountInfo<'info>,
 
     #[account()]
-    system_program: Program<'info, System>, // Later could be used for paying rewards and maybe transaction fee
+    pub system_program: Program<'info, System>, // Later could be used for paying rewards and maybe transaction fee
 }
 
 pub fn consume_order_events(
