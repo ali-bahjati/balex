@@ -21,8 +21,7 @@ import React, { ReactNode, useCallback, useEffect, useMemo, useRef, useState } f
 import { Balex } from './types/balex';
 import balexIdl from './idl/balex.json';
 import * as spl_token from '@solana/spl-token';
-import { EventQueue, MarketState } from '@bonfida/aaob';
-import { Slab } from '@bonfida/aaob';
+import { getPriceFromKey, MarketState } from '@bonfida/aaob';
 
 import { IdlAccounts, Program } from '@project-serum/anchor';
 
@@ -313,17 +312,22 @@ export const UserAccount = () => {
                     </antd.Col>
                 </antd.Row>
                 {market && (
-                    <antd.Row>
-                        <antd.Col style={{padding: 10}}>
-                            <UserTokenManage name="BTC" mint={market.quoteMint} vault={market.quoteVault} />
-                        </antd.Col>
-                        <antd.Col style={{padding: 10}}>
-                            <UserTokenManage name="USD" mint={market.baseMint} vault={market.baseVault} />
-                        </antd.Col>
-                        <antd.Col style={{padding: 10}}>
-                            <NewOrder userAccount={userAccount} />
-                        </antd.Col>
-                    </antd.Row>
+                    <div>
+                        <antd.Row>
+                            <antd.Col style={{ padding: 10 }}>
+                                <UserTokenManage name="BTC" mint={market.quoteMint} vault={market.quoteVault} />
+                            </antd.Col>
+                            <antd.Col style={{ padding: 10 }}>
+                                <UserTokenManage name="USD" mint={market.baseMint} vault={market.baseVault} />
+                            </antd.Col>
+                            <antd.Col style={{ padding: 10 }}>
+                                <NewOrder userAccount={userAccount} />
+                            </antd.Col>
+                        </antd.Row>
+                        <antd.Row>
+                            <OpenOrders userAccount={userAccount} />
+                        </antd.Row>
+                    </div>
                 )}
             </antd.Card>
         );
@@ -590,3 +594,109 @@ export const OrderBook = () => {
     )
 }
 
+
+export const OpenOrders = ({userAccount}: {userAccount: IdlAccounts<Balex>['userAccount']}) => {
+    const wallet = useAnchorWallet();
+    const program = useProgram(wallet);
+
+    type OrderType = {size: number, price: number, order_id: anchor.BN}
+
+    const [borrowOrders, setBorrowOrders] = useState<OrderType[]>([])
+    const [lendOrders, setLendOrders] = useState<OrderType[]>([])
+
+    async function updateOrders() {
+        const [orderbook, eventQueue, asks, bids] = await getMarketAccounts(program)
+        const connection = program.provider.connection;
+        const marketData = await MarketState.retrieve(connection, orderbook, 'confirmed')
+        const askData = await marketData.loadAsksSlab(connection, 'confirmed')
+        const bidData = await marketData.loadBidsSlab(connection, 'confirmed')
+
+        let borrowOrders: OrderType[] = []
+        let lendOrders: OrderType[] = []
+        for (let i = 0; i < userAccount.openOrdersCnt; i++) { 
+            const order_id = userAccount.openOrders[i]
+
+            let askNode = askData.getNodeByKey(order_id as any);
+            if (askNode) {
+                let size = askNode.baseQuantity.toNumber()
+                lendOrders.push({price: getPriceFromKey(order_id).toNumber(), order_id: order_id, size: size})
+            } else {
+                let bidNode = bidData.getNodeByKey(order_id as any);
+                if (bidNode) {
+                    let size = bidNode.baseQuantity.toNumber()
+                    borrowOrders.push({ price: getPriceFromKey(order_id).toNumber(), order_id: order_id, size: size })
+                } else {
+                    console.log("Strange!");
+                    continue;
+                }
+            } 
+        }
+
+        setLendOrders(lendOrders);
+        setBorrowOrders(borrowOrders);
+    }
+
+    async function registerChanges() {
+        const [orderbook, eventQueue, asks, bids] = await getMarketAccounts(program)
+        program.provider.connection.onAccountChange(orderbook, updateOrders, 'confirmed');
+    }
+
+    useEffect(() => {
+        updateOrders();
+    }, [userAccount])
+
+    useEffect(() => {
+        registerChanges();
+    }, [program])
+
+    async function cancelOrder(order_id: anchor.BN) {
+        const [userPub, bump] = await getUserAccount(wallet);
+        const [orderbook, eventQueue, asks, bids] = await getMarketAccounts(program)
+        program.rpc.cancelMyOrder(bump, order_id, {
+            accounts: {
+                market: lexMarketPubkey,
+                owner: wallet.publicKey,
+                userAccount: userPub,
+                orderbook: orderbook,
+                eventQueue: eventQueue,
+                asks: asks,
+                bids: bids,
+                systemProgram: anchor.web3.SystemProgram.programId
+            }
+        });
+    }
+
+    return (<antd.Card title="Open Orders">
+        <antd.Row>
+            <antd.Col style={{padding: 10}}>
+                <antd.Card title="Lend">
+                    {lendOrders.map((order) => (
+                        <antd.Row style={{ padding: 5 }} key={order.order_id.toString()}>
+                            <antd.Col flex='auto'>
+                                {order.size} USD with {order.price}% interest.
+                            </antd.Col>
+                            <antd.Col flex={1}>
+                                <antd.Button style={{ paddingLeft: 15 }} onClick={() => cancelOrder(order.order_id)}>Cancel</antd.Button>
+                            </antd.Col>
+                        </antd.Row>
+                    ))}
+                </antd.Card>
+            </antd.Col>
+
+            <antd.Col style={{ padding: 10 }}>
+                <antd.Card title="Borrow">
+                    {borrowOrders.map((order) => (
+                        <antd.Row style={{ padding: 5 }} key={order.order_id.toString()}>
+                            <antd.Col flex='auto'>
+                                {order.size} USD with {order.price}% interest.
+                            </antd.Col>
+                            <antd.Col flex={1}>
+                                <antd.Button style={{ paddingLeft: 15 }} onClick={() => cancelOrder(order.order_id)}>Cancel</antd.Button>
+                            </antd.Col>
+                        </antd.Row>
+                    ))}
+                </antd.Card>
+            </antd.Col>
+        </antd.Row>
+    </antd.Card>)
+}

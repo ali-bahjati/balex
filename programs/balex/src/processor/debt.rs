@@ -129,8 +129,8 @@ pub fn liquidate_debts(ctx: Context<LiquidateDebts>, debts_id: Vec<u16>, debts_a
         let debt_qty_now = debt.get_debt_as_of_now();
         let max_allowed_liquid = (debt_qty_now + 1)/2;
         if amount > max_allowed_liquid {
-            msg!("Max allowed liquid is ceil(50%) {}", max_allowed_liquid);
-            return Err(ProgramError::Custom(0));
+            msg!("Max allowed liquid is ceil(50%) {}, skipping for now", max_allowed_liquid);
+            // return Err(ProgramError::Custom(0));
         }
 
 

@@ -257,10 +257,8 @@
     eip1193-provider "^1.0.1"
     js-sha3 "^0.8.0"
 
-"@bonfida/aaob@^0.0.3":
+"@bonfida/aaob@./bonfida-aaob":
   version "0.0.3"
-  resolved "https://registry.yarnpkg.com/@bonfida/aaob/-/aaob-0.0.3.tgz#9157aa3aab32abc5e78294801317f53481fa8654"
-  integrity sha512-YLac//38o470VFUOqDnXXIbouJ61cJK6OgylE1sBdm4zvBNsf2/xu2DthhsnLvphIVqY5KLK+VB6iOgtG4olmw==
   dependencies:
     "@solana/spl-token" "0.1.5"
     "@solana/web3.js" "^1.15.0"

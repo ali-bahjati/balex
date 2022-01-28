@@ -28,7 +28,7 @@
         "nuke": "shx rm -rf node_modules yarn.lock"
     },
     "dependencies": {
-        "@bonfida/aaob": "^0.0.3",
+        "@bonfida/aaob": "./bonfida-aaob",
         "@project-serum/anchor": "^0.20.1",
         "@pythnetwork/client": "^2.5.1",
         "@solana/spl-token": "^0.1.8",
