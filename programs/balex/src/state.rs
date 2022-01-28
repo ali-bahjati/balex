@@ -1,7 +1,7 @@
 use anchor_lang::prelude::*;
 use anchor_lang::{AnchorDeserialize, AnchorSerialize};
 use anchor_lang::solana_program::clock::Clock;
-use pyth_client::{load_price, PriceStatus};
+use pyth_client::{load_price};
 
 pub static CALLBACK_INFO_LEN: u64 = 32;
 pub static CALLBACK_ID_LEN: u64 = 32;
