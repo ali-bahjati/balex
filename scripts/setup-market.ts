@@ -33,7 +33,8 @@ console.log("lexMarket", lexMarket)
 console.log("lexMarket", lexMarket.publicKey.toString())
 
 let admin = anchor.web3.Keypair.generate();
-// console.log("admin", admin)
+console.log("admin", admin)
+console.log("admin", admin.publicKey.toString())
 
 let marketSigner: anchor.web3.PublicKey;
 let signerBump: number;
@@ -53,7 +54,7 @@ const setup = async () => {
     mintBase = await spl_token.Token.createMint(connection, admin, admin.publicKey, admin.publicKey, 0, spl_token.TOKEN_PROGRAM_ID);
     mintQuote = await spl_token.Token.createMint(connection, admin, admin.publicKey, admin.publicKey, 0, spl_token.TOKEN_PROGRAM_ID);
     console.log("Mint Base", mintBase.publicKey.toString());
-    console.log("Mint Base", mintQuote.publicKey.toString());
+    console.log("Mint Quote", mintQuote.publicKey.toString());
 
 
     lexBaseVault = await mintBase.createAccount(marketSigner); // TODO: Investigate why associated token account didn't work

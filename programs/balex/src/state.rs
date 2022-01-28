@@ -165,6 +165,16 @@ pub fn get_max_borrow_qty(user_account: &UserAccount, market: &LexMarket, oracle
     (user_account.quote_total / over_collateral_price).saturating_sub(user_total_open_debt)
 }
 
+pub fn get_max_withdraw_qty(user_account: &UserAccount, market: &LexMarket, oracle_account: &AccountInfo) -> u64 {
+    let price: u64 = get_quote_price(&market.oracle_type, &oracle_account).unwrap() as u64; // If price is not present?
+
+    let over_collateral_price = (price * (100 + market.over_collateral_percent as u64) + 99) / 100; // Overflow?
+    let user_total_open_debt = user_account.base_open_borrow + get_user_total_debt(user_account, market);
+
+    user_account.quote_total.saturating_sub(user_total_open_debt.saturating_mul(over_collateral_price))
+}
+
+
 // Returns health factor as percent, not accurate and not safe for overflows! TODO: make it fp32
 pub fn get_user_health_factor(user_account: &UserAccount, market: &LexMarket, oracle_account: &AccountInfo) -> u64 {
     let price: u64 = get_quote_price(&market.oracle_type, &oracle_account).unwrap() as u64; // If price is not present?

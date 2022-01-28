@@ -1,4 +1,4 @@
-use crate::get_max_borrow_qty;
+use crate::get_max_withdraw_qty;
 use anchor_lang::prelude::*;
 use crate::state::{UserAccount, LexMarket};
 use anchor_spl::token::{transfer, Token, TokenAccount, Transfer};
@@ -123,7 +123,7 @@ pub fn withdraw(ctx: Context<Withdraw>, _bump: u8, amount: u64) -> ProgramResult
         }
         user_account.base_free -= amount;
     } else if ctx.accounts.vault.key() == market.quote_vault {
-        let max_withdraw = get_max_borrow_qty(&user_account, &market, &ctx.accounts.price_oracle);
+        let max_withdraw = get_max_withdraw_qty(&user_account, &market, &ctx.accounts.price_oracle);
 
         if amount > max_withdraw {
             msg!("You don't have sufficient funds in your account to withdraw");

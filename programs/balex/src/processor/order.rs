@@ -123,6 +123,7 @@ pub fn new_order(
         }
         Side::Ask => {
             user_account.base_open_lend += order_summary.total_base_qty;
+            user_account.base_free -= order_summary.total_base_qty;
         }
     }
 
