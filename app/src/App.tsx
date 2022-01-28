@@ -206,7 +206,7 @@ export const StubOracle = () => {
 
     useEffect(() => {
         registerPriceChangeHook();
-    }, [wallet]);
+    }, [program]);
 
     return (
         <antd.Card title="Price Oracle">
@@ -273,12 +273,17 @@ export const UserAccount = () => {
     }
 
     useEffect(() => {
-        if (userAccount) {
-            registerUserChangeHook();
-        } if (program) {
+        if (program) {
             loadUserAccount();
         }
-    }, [program, userAccount]);
+        console.log(program)
+    }, [program]);
+
+    useEffect(() => {
+        if(userAccount) {
+            registerUserChangeHook();
+        }
+    }, [userAccount]);
 
     if (userAccount) {
         return (
@@ -385,7 +390,7 @@ export const UserTokenManage = ({name, mint, vault}: {name: string, mint: Public
 
     useEffect(() => {updateUserBalance()}, [userTokenExists, userToken]);
 
-    useInterval(updateUserBalance, 1000);
+    useInterval(updateUserBalance, 5000);
 
     async function createTokenAccount() {
         const connection = program.provider.connection;

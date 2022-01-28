@@ -214,7 +214,7 @@ describe('balex', () => {
   });
 
   it('Deposit balance', async () => {
-    await program.rpc.deposit(aliceBump, new anchor.BN(20), {
+    await program.rpc.deposit(aliceBump, new anchor.BN(2000), {
       accounts: {
         owner: alice.publicKey,
         userAccount: aliceUserAccount,
@@ -238,10 +238,10 @@ describe('balex', () => {
       signers: [alice]
     });
 
-    assert.equal((await mintBase.getAccountInfo(lexBaseVault)).amount, 30);
-    assert.equal((await program.account.userAccount.fetch(aliceUserAccount)).baseFree.toNumber(), 30);
+    assert.equal((await mintBase.getAccountInfo(lexBaseVault)).amount, 2010);
+    assert.equal((await program.account.userAccount.fetch(aliceUserAccount)).baseFree.toNumber(), 2010);
 
-    await program.rpc.deposit(bobBump, new anchor.BN(5000), {
+    await program.rpc.deposit(bobBump, new anchor.BN(10), {
       accounts: {
         owner: bob.publicKey,
         userAccount: bobUserAccount,
@@ -253,14 +253,14 @@ describe('balex', () => {
       signers: [bob]
     });
 
-    assert.equal((await mintQuote.getAccountInfo(lexQuoteVault)).amount, 5000);
+    assert.equal((await mintQuote.getAccountInfo(lexQuoteVault)).amount, 10);
     assert.equal((await program.account.userAccount.fetch(bobUserAccount)).baseFree.toNumber(), 0);
-    assert.equal((await program.account.userAccount.fetch(bobUserAccount)).quoteTotal.toNumber(), 5000);
+    assert.equal((await program.account.userAccount.fetch(bobUserAccount)).quoteTotal.toNumber(), 10);
   });
 
   it('Alice creates Ask order', async () => {
     let rate = new anchor.BN(3);
-    let qty = new anchor.BN(30)
+    let qty = new anchor.BN(500)
     let askType = 1;
     await program.rpc.newOrder(aliceBump, askType, rate, qty, {
 
@@ -301,7 +301,7 @@ describe('balex', () => {
       })
     );
 
-    qty = new anchor.BN(10);
+    qty = new anchor.BN(300);
     await program.rpc.newOrder(bobBump, bidType, rate, qty, {
         accounts: {
           owner: bob.publicKey,
@@ -367,7 +367,7 @@ describe('balex', () => {
     });
 
     aliceUserAccountData = await program.account.userAccount.fetch(aliceUserAccount);
-    assert.equal(aliceUserAccountData.baseOpenLend, 10); 
+    assert.equal(aliceUserAccountData.baseOpenLend, 0); 
 
     console.log("Ensure cannot cancel order twice");
     await assert.rejects(
@@ -388,8 +388,8 @@ describe('balex', () => {
 
 
   it('Bob set another order which becomes risky and will be cancelled', async () => {
-    let rate = new anchor.BN(4 << 32);
-    let qty = new anchor.BN(10)
+    let rate = new anchor.BN(4);
+    let qty = new anchor.BN(100)
     let bidType = 0;
 
     await program.rpc.newOrder(bobBump, bidType, rate, qty, {
@@ -407,7 +407,7 @@ describe('balex', () => {
     });
 
     // Set price to high so it be considered risky
-    // Bob has 20 borrowed in place with 5000 balance
+    // Bob has 300 borrowed in place + 100 request with 10 btc
 
     let bobUserAccountData = await program.account.userAccount.fetch(bobUserAccount);
 
@@ -430,7 +430,7 @@ describe('balex', () => {
           })
     );
 
-    await program.rpc.setStubPrice(new anchor.BN(201), new anchor.BN(10), {
+    await program.rpc.setStubPrice(new anchor.BN(49), new anchor.BN(10), {
       accounts: {
         admin: admin.publicKey,
         stubPrice: stubPriceOracle.publicKey,
@@ -456,7 +456,7 @@ describe('balex', () => {
   });
 
   it('Bob withdraws his borrowed debt', async () => {
-    await program.rpc.withdraw(bobBump, new anchor.BN(10), {
+    await program.rpc.withdraw(bobBump, new anchor.BN(300), {
       accounts: {
         owner: bob.publicKey,
         userAccount: bobUserAccount,
@@ -474,7 +474,7 @@ describe('balex', () => {
     assert.equal(bobUserAccountData.baseFree, 0);
 
     let bobAccountBaseData = await mintBase.getAccountInfo(bobAccountBase)
-    assert.equal(bobAccountBaseData.amount, 10000 + 10)
+    assert.equal(bobAccountBaseData.amount, 10000 + 300)
 
     await assert.rejects(
       program.rpc.withdraw(bobBump, new anchor.BN(3000), {
@@ -494,7 +494,7 @@ describe('balex', () => {
   });
 
   it('Liquidation of Bob debts', async () => {
-    await program.rpc.setStubPrice(new anchor.BN(405), new anchor.BN(10), {
+    await program.rpc.setStubPrice(new anchor.BN(37), new anchor.BN(10), {
       accounts: {
         admin: admin.publicKey,
         stubPrice: stubPriceOracle.publicKey,
@@ -502,7 +502,7 @@ describe('balex', () => {
       }, signers: [admin, stubPriceOracle]
     })
 
-    await program.rpc.liquidateDebts([new anchor.BN(0)], [new anchor.BN(4)], {
+    await program.rpc.liquidateDebts([new anchor.BN(0)], [new anchor.BN(100)], {
       accounts: {
         liquidator: alice.publicKey,
         tokenBaseSrc: aliceAccountBase,
@@ -522,7 +522,7 @@ describe('balex', () => {
     })
 
     let aliceAccountQuoteData = await mintQuote.getAccountInfo(aliceAccountQuote)
-    assert.equal(aliceAccountQuoteData.amount, 10000 + 1669)
+    assert.equal(aliceAccountQuoteData.amount, 10000 + 3)
   });
 
   it('Bob deposits remaining back and settles his debt', async () => {
@@ -538,7 +538,7 @@ describe('balex', () => {
       })
     );
 
-    await program.rpc.deposit(bobBump, new anchor.BN(6), {
+    await program.rpc.deposit(bobBump, new anchor.BN(200), {
       accounts: {
         owner: bob.publicKey,
         userAccount: bobUserAccount,

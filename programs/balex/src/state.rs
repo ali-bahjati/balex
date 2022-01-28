@@ -37,8 +37,10 @@ pub struct Debt {
 
 impl Debt {
     pub fn get_debt_as_of_now(self: &Self) -> u64 {
+        msg!("{}", self.timestamp);
         let diff_timestamp = (Clock::get().unwrap().unix_timestamp - self.timestamp) as u64;
-        let profit_rate: f64 = (self.interest_rate * diff_timestamp) as f64 / (60.*60.);
+        let profit_rate: f64 = (self.interest_rate * diff_timestamp) as f64 / (60.*60.*100.);
+        msg!("{} {} {}", self.qty, diff_timestamp, profit_rate);
 
         (self.qty as f64 * (1. + profit_rate)).round() as u64 - self.liquid_qty
     }
@@ -158,20 +160,20 @@ pub fn get_user_total_debt(user_account: &UserAccount, market: &LexMarket) -> u6
 pub fn get_max_borrow_qty(user_account: &UserAccount, market: &LexMarket, oracle_account: &AccountInfo) -> u64 {
     let price: u64 = get_quote_price(&market.oracle_type, &oracle_account).unwrap() as u64; // If price is not present?
 
-    let over_collateral_price = (price * (100 + market.over_collateral_percent as u64) + 99) / 100; // Overflow?
-
+    let total_possible = user_account.quote_total * 100 * price / (100 + market.over_collateral_percent as u64);
     let user_total_open_debt = user_account.base_open_borrow + get_user_total_debt(user_account, market);
 
-    (user_account.quote_total / over_collateral_price).saturating_sub(user_total_open_debt)
+    total_possible.saturating_sub(user_total_open_debt)
 }
 
 pub fn get_max_withdraw_qty(user_account: &UserAccount, market: &LexMarket, oracle_account: &AccountInfo) -> u64 {
     let price: u64 = get_quote_price(&market.oracle_type, &oracle_account).unwrap() as u64; // If price is not present?
 
-    let over_collateral_price = (price * (100 + market.over_collateral_percent as u64) + 99) / 100; // Overflow?
     let user_total_open_debt = user_account.base_open_borrow + get_user_total_debt(user_account, market);
 
-    user_account.quote_total.saturating_sub(user_total_open_debt.saturating_mul(over_collateral_price))
+    let safe_backed = (user_total_open_debt * (100 + market.over_collateral_percent as u64) + price * 100 -1) / (price * 100);
+
+    user_account.quote_total.saturating_sub(safe_backed)
 }
 
 
@@ -187,7 +189,7 @@ pub fn get_user_health_factor(user_account: &UserAccount, market: &LexMarket, or
 
     let user_quote = user_account.quote_total;
 
-    10000 * user_quote / (price * user_total_open_debt * (100 + (market.over_collateral_percent+1) as u64 /2))
+    10000 * price * user_quote / (user_total_open_debt * (100 + (market.over_collateral_percent+1) as u64 /2))
 }
 
 pub fn create_debt(qty: u64, interest_rate: u64, lender: &mut UserAccount, borrower: &mut UserAccount, market: &mut LexMarket) -> ProgramResult {
@@ -212,7 +214,7 @@ pub fn create_debt(qty: u64, interest_rate: u64, lender: &mut UserAccount, borro
             borrower.base_open_borrow -= qty;
 
             lender.base_locked += qty;
-            lender.base_free -= qty;
+            lender.base_open_lend -= qty;
 
             msg!("Successfully created a debt of {} with interest {} between {} and {}", qty, interest_rate, lender.owner, borrower.owner);
             return Ok(())

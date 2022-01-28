@@ -90,7 +90,7 @@ pub fn liquidate_debts(ctx: Context<LiquidateDebts>, debts_id: Vec<u16>, debts_a
     let borrower_health = get_user_health_factor(&borrower_account, &market, &ctx.accounts.price_oracle);
 
     if borrower_health >= 100 {
-        msg!("Borrower is healthy! Health: {}");
+        msg!("Borrower is healthy! Health: {}", borrower_health);
         return Err(ProgramError::InvalidAccountData);
     }
 
@@ -145,7 +145,8 @@ pub fn liquidate_debts(ctx: Context<LiquidateDebts>, debts_id: Vec<u16>, debts_a
         total_base += amount;
     }
 
-    let mut total_quote = total_base * (get_quote_price(&market.oracle_type, &ctx.accounts.price_oracle).unwrap() as u64);
+    let price = get_quote_price(&market.oracle_type, &ctx.accounts.price_oracle).unwrap() as u64;
+    let mut total_quote = (total_base + price - 1) / price;
     total_quote = (total_quote as f64 * 1.03).round() as u64;
 
     if borrower_account.quote_total < total_quote {
