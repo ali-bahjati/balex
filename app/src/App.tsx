@@ -166,6 +166,7 @@ const Core = () => {
             <div>
                 <StubOracle />
                 <UserAccount />
+                <OrderBook />
             </div>
         </div>
     );
@@ -533,3 +534,59 @@ export const NewOrder = ({userAccount}: {userAccount: IdlAccounts<Balex>['userAc
         </antd.Card>
     )
 }
+
+
+export const OrderBook = () => {
+    const wallet = useAnchorWallet();
+    const program = useProgram(wallet);
+    const [asks, setAsks] = useState<{size: number, price: number}[]>([])
+    const [bids, setBids] = useState<{size: number, price: number}[]>([])
+
+    async function updateOrderBook() {
+        if (!program) {
+            return;
+        }
+        const [orderbook, eventQueue, asks, bids] = await getMarketAccounts(program)
+        const connection = program.provider.connection;
+        const marketData = await MarketState.retrieve(connection, orderbook, 'confirmed')
+        const askData = await marketData.loadAsksSlab(connection, 'confirmed')
+        const bidData = await marketData.loadBidsSlab(connection, 'confirmed')
+
+        setAsks(askData.getL2DepthJS(10, true));
+        setBids(bidData.getL2DepthJS(10, false));
+    }
+
+    async function registerChanges() {
+        const [orderbook, eventQueue, asks, bids] = await getMarketAccounts(program)
+        program.provider.connection.onAccountChange(orderbook, updateOrderBook, 'confirmed');
+    }
+
+    useEffect(() => {
+        updateOrderBook();
+        if (program) {
+            registerChanges();
+        }
+    }, [program])
+
+    return (
+        <antd.Card>
+            <antd.Row gutter={{ xs: 8, sm: 16, md: 24, lg: 32 }}>
+                <antd.Col className="gutter-row" span={6}>
+                    <antd.Card title="Asks">
+                        {asks.map( ({price, size}) => (
+                            <antd.Row key={price + ''}>{size} with {price}% interest</antd.Row> 
+                        ))}
+                    </antd.Card>
+                </antd.Col>
+                <antd.Col className="gutter-row" span={6}>
+                    <antd.Card title="Bids">
+                        {bids.map( ({price, size}) => (
+                            <antd.Row key={price + ''}>{size} with {price}% interest</antd.Row> 
+                        ))}
+                    </antd.Card>
+                </antd.Col>
+            </antd.Row>
+        </antd.Card>
+    )
+}
+
