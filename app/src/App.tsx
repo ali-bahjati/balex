@@ -24,6 +24,7 @@ import * as spl_token from '@solana/spl-token';
 import { getPriceFromKey, MarketState } from '@bonfida/aaob';
 
 import { IdlAccounts, Program } from '@project-serum/anchor';
+import { WalletAdapterNetwork } from '@solana/wallet-adapter-base';
 
 const { Header, Content } = Layout;
 
@@ -77,8 +78,11 @@ function useInterval(callback, delay) {
 function getProvider(wallet: AnchorWallet) {
     /* create the provider and return it to the caller */
     /* network set to local network for now */
-    const network = 'http://127.0.0.1:8899';
-    const connection = new anchor.web3.Connection(network, 'confirmed');
+    const network = WalletAdapterNetwork.Devnet;
+
+    const endpoint = useMemo(() => clusterApiUrl(network), [network]);
+
+    const connection = new anchor.web3.Connection(endpoint, 'confirmed');
 
     const provider = new anchor.Provider(connection, wallet, 'confirmed' as any);
     return provider;
@@ -140,13 +144,13 @@ export const App = () => {
 };
 
 const WalletContext = ({ children }: { children: ReactNode }) => {
-    // const network = WalletAdapterNetwork.Devnet;
+    const network = WalletAdapterNetwork.Devnet;
 
-    // const endpoint = useMemo(() => clusterApiUrl(network), [network]);
-    const endpoint = 'http://localhost:8899';
+    const endpoint = useMemo(() => clusterApiUrl(network), [network]);
+    // const endpoint = 'http://localhost:8899';
 
     const wallets = useMemo(
-        () => [new PhantomWalletAdapter(), new SolletExtensionWalletAdapter()],
+        () => [new PhantomWalletAdapter(), new SolletExtensionWalletAdapter({network})],
         [] //[network]
     );
 
