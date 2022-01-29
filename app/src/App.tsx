@@ -327,6 +327,9 @@ export const UserAccount = () => {
                         <antd.Row>
                             <OpenOrders userAccount={userAccount} />
                         </antd.Row>
+                        <antd.Row>
+                            <OpenDebts userAccount={userAccount} />
+                        </antd.Row>
                     </div>
                 )}
             </antd.Card>
@@ -704,4 +707,43 @@ export const OpenOrders = ({userAccount}: {userAccount: IdlAccounts<Balex>['user
 
         </antd.Row>
     </antd.Card>)
+}
+
+export const OpenDebts = ({userAccount}: {userAccount: IdlAccounts<Balex>['userAccount']}) => {
+    const wallet = useAnchorWallet();
+    const program = useProgram(wallet);
+
+    type DebtType = {
+        borrower: PublicKey,
+        lender: PublicKey,
+        interestRate: anchor.BN,
+        liquidQty: anchor.BN,
+        qty: anchor.BN,
+        timestamp: anchor.BN
+    }
+
+
+
+    const [borrowDebts, setBorrowDebts] = useState<DebtType[]>([])
+    const [lendDebts, setLendDebts] = useState<DebtType[]>([])
+
+    async function updateDebts() {
+        let marketData = await program.account.lexMarket.fetch(lexMarketPubkey);
+        console.log(marketData.debts)
+
+        for (let i = 0; i < userAccount.openDebtsCnt; i++) {
+            let debt_id = userAccount.openDebts[i];
+            let debt: DebtType = marketData.debts[debt_id]
+        }
+    }
+
+    useEffect(() => {
+        updateDebts();
+    }, [userAccount])
+
+
+    return (
+        <antd.Card title="Open Debts">
+        </antd.Card>
+    )
 }
