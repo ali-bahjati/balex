@@ -11,12 +11,12 @@ In the current directory, run :
 
 `cargo build --release`
 
-This will output an executable at `target/release/dex-cranker`
+This will output an executable at `target/release/balex-cranker`
 
 ## Usage
 
 ```sh
-dex-cranker --fee-payer <KEYPAIR> --market <market> --program-id <program_id> --reward-target <reward-target>
+balex-cranker --fee-payer <KEYPAIR> --market <market> --program-id <program_id> --reward-target <reward-target>
 ```
 
-Run `dex-cranker --help` for more options and more information.
+Run `balex-cranker --help` for more options and more information.
