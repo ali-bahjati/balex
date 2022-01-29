@@ -1,7 +1,7 @@
 use anchor_lang::prelude::*;
 use anchor_lang::{AnchorDeserialize, AnchorSerialize};
 
-declare_id!("CGQawUSGDyLdA96dbaL3YsA61JPdyv1zPYmvDRjpnHjF");
+declare_id!("HSqPL6LuWSVpztWHWD1yZh36tugGdUC6s5SLSTddTnDw");
 
 pub mod state;
 pub mod processor;

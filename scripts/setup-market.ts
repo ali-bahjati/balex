@@ -42,13 +42,23 @@ let signerBump: number;
 let lexBaseVault: anchor.web3.PublicKey;
 let lexQuoteVault: anchor.web3.PublicKey;
 
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+
 const setup = async () => {
+    console.log(program.programId.toString());
+
     [marketSigner, signerBump] = await anchor.web3.PublicKey.findProgramAddress([lexMarket.publicKey.toBytes()], program.programId)
     console.log("market signer & bump", marketSigner.toString(), signerBump);
 
     console.log("Request airdrops");
-    await connection.confirmTransaction(await connection.requestAirdrop(admin.publicKey, 10 * anchor.web3.LAMPORTS_PER_SOL));
-    await connection.confirmTransaction(await connection.requestAirdrop(provider.wallet.publicKey, 20 * anchor.web3.LAMPORTS_PER_SOL));
+    await connection.confirmTransaction(await connection.requestAirdrop(admin.publicKey, 1 * anchor.web3.LAMPORTS_PER_SOL));
+    console.log(await connection.getBalance(admin.publicKey))
+    await sleep(10000);
+    await connection.confirmTransaction(await connection.requestAirdrop(provider.wallet.publicKey, 1 * anchor.web3.LAMPORTS_PER_SOL));
+    console.log(await connection.getBalance(provider.wallet.publicKey))
 
     console.log("Create mints");
     mintBase = await spl_token.Token.createMint(connection, admin, admin.publicKey, admin.publicKey, 0, spl_token.TOKEN_PROGRAM_ID);
@@ -98,6 +108,7 @@ const setup = async () => {
     // }
 
     // program.account.stubPrice.subscribe(stubPriceOracle.publicKey, "confirmed").addListener("change", logger);
+
     console.log("Create Stub Price account");
     await program.rpc.setStubPrice(new anchor.BN(100), new anchor.BN(10), {
       accounts: {

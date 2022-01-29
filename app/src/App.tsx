@@ -33,25 +33,25 @@ const { Header, Content } = Layout;
 //
 
 const programId = new PublicKey(balexIdl.metadata.address);
-const lexMarketPubkey = new PublicKey('EcmMMt1tdwLtqKKL5zoCfFHXW16REjc7w35LDuKJB3aY');
+const lexMarketPubkey = new PublicKey('BkBNRBCxYic4ZrmUGNLasm2FNJw25PbmhfjcChK5D2GE');
 
 const admin = anchor.web3.Keypair.fromSecretKey(new Uint8Array([
-    59, 225, 186,  23,  64,  44, 197, 113, 164,  74, 216,
-    98,  33, 200,  17,  77,   9, 181, 115, 123,  80,  24,
-    88, 217,  27,  77,  76,  28, 108,  41,  64, 218, 180,
-    41, 200, 230, 112, 212, 170, 148, 141, 217, 142, 233,
-    45, 238, 223, 149,  64, 105, 120, 232, 242,  46, 178,
-    16,  18, 126, 137,  61, 206,   9,   2,  13
+    108,  38, 107, 182,  51,  43, 128, 137,  35, 240,  23,
+    174, 102,  51,  10, 255, 156, 179, 109,  42, 238,  99,
+     14, 237,  85,  34, 172, 211, 126, 239, 202,  90,  11,
+    148, 123, 175,  92,  85, 159,  13, 151,  70, 127, 142,
+    100,  41, 117,  55,  54,  67,  59,  49,  52,   6,  92,
+    240,  83, 236, 155, 161,  52,  91,  51, 246
 ]));
 
 const stubOracle = anchor.web3.Keypair.fromSecretKey(
     new Uint8Array([
-        164, 136, 233, 111, 240, 29, 97, 187, 248, 101, 216,
-        129, 99, 7, 134, 146, 9, 64, 42, 188, 164, 3,
-        43, 3, 31, 134, 201, 97, 96, 8, 146, 85, 52,
-        182, 218, 14, 77, 140, 205, 34, 249, 144, 123, 62,
-        146, 96, 65, 198, 225, 169, 152, 126, 106, 143, 124,
-        236, 38, 152, 211, 140, 26, 185, 66, 103
+        145, 104,  65, 171,  46,  67,  64, 252,  60, 118, 148,
+        44,  18, 145, 188, 173, 150, 230,  56, 202,  17, 188,
+        16, 243, 180,  56, 133,  63, 126,  15, 188,  52, 202,
+       223, 160, 168, 184,  60, 186, 188,  21, 119,  68,   6,
+       142, 204, 110, 254, 245,  90,  84,  34,  86, 101, 139,
+        32, 115, 139, 236, 182, 100,  56,   4, 172
     ])
 );
 
@@ -80,7 +80,7 @@ function getProvider(wallet: AnchorWallet) {
     /* network set to local network for now */
     const network = WalletAdapterNetwork.Devnet;
 
-    const endpoint = useMemo(() => clusterApiUrl(network), [network]);
+    const endpoint = clusterApiUrl(network);
 
     const connection = new anchor.web3.Connection(endpoint, 'confirmed');
 
@@ -94,6 +94,7 @@ function useProgram(wallet: AnchorWallet): anchor.Program<Balex> {
             return null;
         }
         const program: anchor.Program<Balex> = new anchor.Program<Balex>(balexIdl as any, programId, getProvider(wallet));
+        console.log(program);
         return program;
     }, [wallet]);
 }
@@ -167,7 +168,7 @@ const Core = () => {
     return (
         <div className="App">
             <div>
-                <StubOracle />
+                {/* <StubOracle /> */}
                 <UserAccount />
                 <OrderBook />
             </div>
