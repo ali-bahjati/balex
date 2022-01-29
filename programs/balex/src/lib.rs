@@ -70,6 +70,10 @@ pub mod balex {
         processor::debt::liquidate_debts(ctx, debts_id, debts_amount)
     }
 
+    pub fn order_dummy(ctx: Context<RemUserAccount>) -> ProgramResult {
+        processor::order::order_dummy(ctx)
+    }
+
     // close account?
     // close market?
 }

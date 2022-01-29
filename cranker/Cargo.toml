@@ -1,0 +1,23 @@
+[package]
+name = "balex-cranker"
+version = "0.1.0"
+authors = ["Ali Behjati <bahjatia@gmail.com>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+solana-program = "1.7.11"
+solana-sdk = "1.7.11"
+balex = {path = "../programs/balex", features = ["no-entrypoint"]}
+anchor-client = "0.20.1"
+anchor-lang = "0.20.1"
+solana-client = "1.7.11"
+solana-clap-utils = "1.7.11"
+clap = "2.33.3"
+tokio = {version = "1.11.0", features = ["rt-multi-thread", "time"]}
+spl-associated-token-account = "1.0.3"
+thiserror = "1.0.29"
+borsh = "0.9.1"
+agnostic-orderbook = {git = "https://github.com/Bonfida/agnostic-orderbook.git", features = ["no-entrypoint"]}
+bytemuck = "1.7"

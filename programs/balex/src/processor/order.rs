@@ -294,6 +294,7 @@ pub struct ConsumerOrderEvents<'info> {
     pub system_program: Program<'info, System>, // Later could be used for paying rewards and maybe transaction fee
 }
 
+
 pub fn consume_order_events(
     ctx: Context<ConsumerOrderEvents>,
     max_iterations: u64,
@@ -301,7 +302,8 @@ pub fn consume_order_events(
     let user_accounts: &[AccountInfo] = ctx.remaining_accounts;
 
     if user_accounts.is_empty() {
-        return Err(ProgramError::InvalidAccountData);
+        msg!("No user account provided");
+        return Ok(());
     }
 
     let event_queue_header =
@@ -422,6 +424,22 @@ fn consume_event(
 
 fn get_user_account_loader<'info>(user_accounts: &Vec<&AccountInfo<'info>>, callback_info: &Vec<u8>) -> AccountLoader<'info, UserAccount> {
     let owner = Pubkey::new(&callback_info[..]);
+    msg!("owner {}", owner);
+    msg!("user accounts: ");
+    for user_account in user_accounts {
+        msg!("user_account: {}", user_account.key());
+    }
     let user_account_id = user_accounts.binary_search_by_key(&owner, |acc| acc.key()).unwrap();
     AccountLoader::try_from(&user_accounts[user_account_id]).unwrap()
+}
+
+// Used for cranker
+#[derive(Accounts)]
+pub struct RemUserAccount<'info> {
+    #[account(mut)]
+    user_account: AccountInfo<'info>
+}
+
+pub fn order_dummy(_ctx: Context<RemUserAccount>) -> ProgramResult {
+    Ok(())
 }
