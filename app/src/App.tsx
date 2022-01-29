@@ -168,7 +168,7 @@ const Core = () => {
     return (
         <div className="App">
             <div>
-                {/* <StubOracle /> */}
+                <StubOracle />
                 <UserAccount />
                 <OrderBook />
             </div>

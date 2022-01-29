@@ -1,6 +1,7 @@
 use anchor_lang::prelude::*;
 use anchor_lang::{AnchorDeserialize, AnchorSerialize};
 use anchor_lang::solana_program::clock::Clock;
+use std::time::{SystemTime, UNIX_EPOCH};
 use pyth_client::{load_price};
 
 pub static CALLBACK_INFO_LEN: u64 = 32;
@@ -37,8 +38,12 @@ pub struct Debt {
 
 impl Debt {
     pub fn get_debt_as_of_now(self: &Self) -> u64 {
-        msg!("{}", self.timestamp);
+        #[cfg(target_arch = "bpf")]
         let diff_timestamp = (Clock::get().unwrap().unix_timestamp - self.timestamp) as u64;
+
+        #[cfg(not(target_arch = "bpf"))]
+        let diff_timestamp = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs() - self.timestamp as u64;
+
         let profit_rate: f64 = (self.interest_rate * diff_timestamp) as f64 / (60.*60.*100.);
         msg!("{} {} {}", self.qty, diff_timestamp, profit_rate);
 
@@ -189,6 +194,22 @@ pub fn get_user_health_factor(user_account: &UserAccount, market: &LexMarket, or
 
     let user_quote = user_account.quote_total;
 
+    10000 * price * user_quote / (user_total_open_debt * (100 + (market.over_collateral_percent+1) as u64 /2))
+}
+
+pub fn get_user_health_factor_after_liquid(liquid_amount: u64, user_account: &UserAccount, market: &LexMarket, oracle_account: &AccountInfo) -> u64 {
+    let price: u64 = get_quote_price(&market.oracle_type, &oracle_account).unwrap() as u64; // If price is not present?
+
+    let user_total_open_debt = user_account.base_open_borrow + get_user_total_debt(user_account, market) - liquid_amount;
+
+    if user_total_open_debt == 0 {
+        return 100;
+    }
+
+    let liquid_quote = (liquid_amount + price - 1) / price;
+    let liquid_quote = (liquid_quote as f64 * 1.03).round() as u64;
+
+    let user_quote = user_account.quote_total - liquid_quote;
     10000 * price * user_quote / (user_total_open_debt * (100 + (market.over_collateral_percent+1) as u64 /2))
 }
 

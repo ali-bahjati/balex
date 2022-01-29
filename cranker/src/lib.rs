@@ -44,7 +44,7 @@ pub const MAX_NUMBER_OF_USER_ACCOUNTS: usize = 20;
 
 impl Context {
     pub fn crank(self) {
-        let url = Cluster::Localnet;
+        let url = Cluster::Devnet;
         let fee_payer_copy = Keypair::from_bytes(&self.fee_payer.to_bytes()[..]).unwrap();
  
         let client = Client::new_with_options(url, Rc::new(fee_payer_copy), CommitmentConfig::confirmed());
