@@ -18,3 +18,5 @@ balex-liquidator --fee-payer <KEYPAIR> --market <market> --program-id <program_i
 ```
 
 Run `balex-liquidator --help` for more options and more information.
+
+Reward target should have associated accounts for the mint tokens of market
