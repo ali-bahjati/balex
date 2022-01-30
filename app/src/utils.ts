@@ -6,7 +6,7 @@ import balexIdl from './idl/balex.json';
 import { WalletAdapterNetwork } from "@solana/wallet-adapter-base";
 import { clusterApiUrl, PublicKey } from "@solana/web3.js";
 import { lexMarketPubkey, programId } from "./settings";
-import { Program } from "@project-serum/anchor";
+import { IdlAccounts, Program } from "@project-serum/anchor";
 import { getPriceFromKey, MarketState } from '@bonfida/aaob';
 
 export function getProvider(wallet: AnchorWallet) {
@@ -75,4 +75,64 @@ export async function getMarketAccounts(program: Program<Balex>): Promise<[Publi
     const orderbookData = await MarketState.retrieve(program.provider.connection, orderbook, 'confirmed')
 
     return [orderbook, orderbookData.eventQueue, orderbookData.asks, orderbookData.bids];
+}
+
+export type DebtType = {
+    borrower: PublicKey,
+    lender: PublicKey,
+    interestRate: anchor.BN,
+    liquidQty: anchor.BN,
+    qty: anchor.BN,
+    timestamp: anchor.BN
+}
+
+export function getDebtAsOfNow(debt: DebtType): number {
+    let diff_timestamp = Date.now()/1000 - debt.timestamp.toNumber();
+    let nowDebt = debt.qty.toNumber();
+    console.log(diff_timestamp);
+    console.log(nowDebt);
+    nowDebt = nowDebt + diff_timestamp*debt.interestRate.toNumber() / (60*60*100)
+    nowDebt = Math.ceil(nowDebt);
+    return nowDebt - debt.liquidQty.toNumber(); 
+}
+
+export async function getTotalDebtToPay(userAccount: IdlAccounts<Balex>['userAccount'], program: Program<Balex>): Promise<number> {
+    let marketData = await program.account.lexMarket.fetch(lexMarketPubkey);
+
+    let totalDebt: number = 0;
+    for (let i = 0; i < userAccount.openDebtsCnt; i++) {
+        let debt_id = userAccount.openDebts[i];
+        let debt: DebtType = marketData.debts[debt_id]
+        totalDebt +=  getDebtAsOfNow(debt);
+    }
+
+    return totalDebt;
+}
+
+export async function getOraclePrice(oracle: PublicKey, type: any, program: Program<Balex>): Promise<number> {
+    // Only stub oracle for now
+    let stubData = await program.account.stubPrice.fetch(oracle);
+    return stubData.price.toNumber();
+}
+
+// returns health, max withdraw, max borrow
+export async function getUserStat(userAccount: IdlAccounts<Balex>['userAccount'], program: Program<Balex>): Promise<[number, number, number]> {
+    let marketData = await program.account.lexMarket.fetch(lexMarketPubkey);
+    let totalDebt = await getTotalDebtToPay(userAccount, program);
+
+
+    let price = await getOraclePrice(marketData.priceOracle, marketData.oracleType, program);
+
+    let maxBorrow = 100 * userAccount.quoteTotal.toNumber() * price / (100 + marketData.overCollateralPercent) - totalDebt;
+
+    if (totalDebt < 1) {
+        return [100, marketData.quoteTotal.toNumber(), maxBorrow];
+    }
+
+    let maxWithdraw = userAccount.quoteTotal.toNumber() - (totalDebt * (100 + marketData.overCollateralPercent)/(100*price)) 
+    let health = 10000 * userAccount.quoteTotal.toNumber() * price / (totalDebt * (100 + marketData.overCollateralPercent/2))
+
+    health = Math.floor(health);
+
+    return [health, maxWithdraw, maxBorrow];
 }

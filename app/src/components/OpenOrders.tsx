@@ -87,7 +87,7 @@ export default function OpenOrders({userAccount}: {userAccount: IdlAccounts<Bale
                 <span className='label'>Order</span>
                 <span className='label'>Amount</span>
                 <span className='label'>Interest Rate</span>
-                <span className='label'></span>
+                <span className='label'>Cancel</span>
             </div>
 
             <Divider marginTop='0px' />
