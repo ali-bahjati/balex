@@ -1131,10 +1131,10 @@
     assert "^2.0.0"
     buffer "^6.0.1"
 
-"@react-icons/all-files@^4.1.0":
-  version "4.1.0"
-  resolved "https://registry.yarnpkg.com/@react-icons/all-files/-/all-files-4.1.0.tgz#477284873a0821928224b6fc84c62d2534d6650b"
-  integrity sha512-hxBI2UOuVaI3O/BhQfhtb4kcGn9ft12RWAFVMUeNjqqhLsHvFtzIkFaptBJpFDANTKoDfdVoHTKZDlwKCACbMQ==
+"@react-icons/all-files@^4.3.1":
+  version "4.0.0"
+  resolved "https://registry.yarnpkg.com/@react-icons/all-files/-/all-files-4.0.0.tgz#b5a21122717c4fc772cfc8dfc749fe32744abf70"
+  integrity sha512-Ka6ZE7tck7i7v2sagEeNMfby30zzQVuiZqiEwf6vcJxdJWpM6T496w8bXYv/6svKy47vfzBCbgv1rE37empRrw==
 
 "@solana/buffer-layout@^3.0.0":
   version "3.0.0"
