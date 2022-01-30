@@ -125,14 +125,15 @@ export async function getUserStat(userAccount: IdlAccounts<Balex>['userAccount']
 
     let price = await getOraclePrice(marketData.priceOracle, marketData.oracleType, program);
 
-    let maxBorrow = 100 * userAccount.quoteTotal.toNumber() * price / (100 + marketData.overCollateralPercent) - totalDebt;
+    let maxBorrow = 100 * userAccount.quoteTotal.toNumber() * price / (100 + marketData.overCollateralPercent) - totalDebt - userAccount.baseOpenBorrow.toNumber();
+    maxBorrow = Math.max(maxBorrow, 0);
 
     if (totalDebt < 1) {
         return [100, marketData.quoteTotal.toNumber(), maxBorrow, totalDebt];
     }
 
-    let maxWithdraw = userAccount.quoteTotal.toNumber() - (totalDebt * (100 + marketData.overCollateralPercent)/(100*price)) 
-    let health = 10000 * userAccount.quoteTotal.toNumber() * price / (totalDebt * (100 + marketData.overCollateralPercent/2))
+    let maxWithdraw = userAccount.quoteTotal.toNumber() - ((totalDebt +  userAccount.baseOpenBorrow.toNumber()) * (100 + marketData.overCollateralPercent)/(100*price)) 
+    let health = 10000 * userAccount.quoteTotal.toNumber() * price / ((totalDebt +  userAccount.baseOpenBorrow.toNumber()) * (100 + marketData.overCollateralPercent/2))
 
     health = Math.floor(health);
 
