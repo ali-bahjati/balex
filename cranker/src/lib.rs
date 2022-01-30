@@ -40,7 +40,7 @@ pub struct Context {
     pub endpoint: String,
 }
 
-pub const MAX_ITERATIONS: u64 = 10;
+pub const MAX_ITERATIONS: u64 = 1;
 pub const MAX_NUMBER_OF_USER_ACCOUNTS: usize = 20;
 
 impl Context {
@@ -72,7 +72,7 @@ impl Context {
         loop {
             let res = self.consume_events_iteration(&connection, &orderbook, &market_state, &program);
             println!("{:#?}", res);
-            thread::sleep(time::Duration::from_secs(5));
+            thread::sleep(time::Duration::from_secs(1));
         }
     }
 
