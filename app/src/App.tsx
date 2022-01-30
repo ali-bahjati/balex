@@ -28,6 +28,8 @@ import OpenOrders from './components/OpenOrders';
 import { getUserAccount, useProgram } from './utils';
 import { lexMarketPubkey } from './settings';
 
+import Orderbook from './components/Orderbook';
+
 //
 // Configurations.
 //
@@ -132,7 +134,8 @@ const Core = () => {
     return (
         <div className='content'>
             <div style={{ height: '100%' }}>
-                <Account userAccount={userAccount} />
+                {/* <Account userAccount={userAccount} /> */}
+                <Orderbook />
             </div>
 
             <div style={{ height: '100%', display: 'flex', flex: '1' }}>
@@ -514,61 +517,61 @@ export const UserTokenManage = ({ name, mint, vault }: { name: string, mint: Pub
 // }
 
 
-export const OrderBook = () => {
-    const wallet = useAnchorWallet();
-    const program = useProgram(wallet);
-    const [asks, setAsks] = useState<{ size: number, price: number }[]>([])
-    const [bids, setBids] = useState<{ size: number, price: number }[]>([])
+// export const OrderBook = () => {
+//     const wallet = useAnchorWallet();
+//     const program = useProgram(wallet);
+//     const [asks, setAsks] = useState<{ size: number, price: number }[]>([])
+//     const [bids, setBids] = useState<{ size: number, price: number }[]>([])
 
-    async function updateOrderBook() {
-        if (!program) {
-            return;
-        }
-        const [orderbook, eventQueue, asks, bids] = await getMarketAccounts(program)
-        const connection = program.provider.connection;
-        const marketData = await MarketState.retrieve(connection, orderbook, 'confirmed')
-        const askData = await marketData.loadAsksSlab(connection, 'confirmed')
-        const bidData = await marketData.loadBidsSlab(connection, 'confirmed')
+//     async function updateOrderBook() {
+//         if (!program) {
+//             return;
+//         }
+//         const [orderbook, eventQueue, asks, bids] = await getMarketAccounts(program)
+//         const connection = program.provider.connection;
+//         const marketData = await MarketState.retrieve(connection, orderbook, 'confirmed')
+//         const askData = await marketData.loadAsksSlab(connection, 'confirmed')
+//         const bidData = await marketData.loadBidsSlab(connection, 'confirmed')
 
-        setAsks(askData.getL2DepthJS(10, true));
-        setBids(bidData.getL2DepthJS(10, false));
-    }
+//         setAsks(askData.getL2DepthJS(10, true));
+//         setBids(bidData.getL2DepthJS(10, false));
+//     }
 
-    async function registerChanges() {
-        const [orderbook, eventQueue, asks, bids] = await getMarketAccounts(program)
-        program.provider.connection.onAccountChange(orderbook, updateOrderBook, 'confirmed');
-        program.provider.connection.onAccountChange(bids, updateOrderBook, 'confirmed');
-        program.provider.connection.onAccountChange(asks, updateOrderBook, 'confirmed');
-    }
+//     async function registerChanges() {
+//         const [orderbook, eventQueue, asks, bids] = await getMarketAccounts(program)
+//         program.provider.connection.onAccountChange(orderbook, updateOrderBook, 'confirmed');
+//         program.provider.connection.onAccountChange(bids, updateOrderBook, 'confirmed');
+//         program.provider.connection.onAccountChange(asks, updateOrderBook, 'confirmed');
+//     }
 
-    useEffect(() => {
-        updateOrderBook();
-        if (program) {
-            registerChanges();
-        }
-    }, [program])
+//     useEffect(() => {
+//         updateOrderBook();
+//         if (program) {
+//             registerChanges();
+//         }
+//     }, [program])
 
-    return (
-        <antd.Card>
-            <antd.Row gutter={{ xs: 8, sm: 16, md: 24, lg: 32 }}>
-                <antd.Col className="gutter-row" span={6}>
-                    <antd.Card title="Borrows">
-                        {bids.map(({ price, size }) => (
-                            <antd.Row key={price + ''}>{size} with {price}% interest</antd.Row>
-                        ))}
-                    </antd.Card>
-                </antd.Col>
-                <antd.Col className="gutter-row" span={6}>
-                    <antd.Card title="Lends">
-                        {asks.map(({ price, size }) => (
-                            <antd.Row key={price + ''}>{size} with {price}% interest</antd.Row>
-                        ))}
-                    </antd.Card>
-                </antd.Col>
-            </antd.Row>
-        </antd.Card>
-    )
-}
+//     return (
+//         <antd.Card>
+//             <antd.Row gutter={{ xs: 8, sm: 16, md: 24, lg: 32 }}>
+//                 <antd.Col className="gutter-row" span={6}>
+//                     <antd.Card title="Borrows">
+//                         {bids.map(({ price, size }) => (
+//                             <antd.Row key={price + ''}>{size} with {price}% interest</antd.Row>
+//                         ))}
+//                     </antd.Card>
+//                 </antd.Col>
+//                 <antd.Col className="gutter-row" span={6}>
+//                     <antd.Card title="Lends">
+//                         {asks.map(({ price, size }) => (
+//                             <antd.Row key={price + ''}>{size} with {price}% interest</antd.Row>
+//                         ))}
+//                     </antd.Card>
+//                 </antd.Col>
+//             </antd.Row>
+//         </antd.Card>
+//     )
+// }
 
 
 // export const OpenOrders = ({userAccount}: {userAccount: IdlAccounts<Balex>['userAccount']}) => {
