@@ -237,6 +237,8 @@ export const UserAccount = () => {
     const program = useProgram(wallet);
 
     const [userAccount, setUserAccount] = useState<anchor.IdlAccounts<Balex>['userAccount']>(null);
+    const [userStat, setUserStat] = useState<[number, number, number]>([0, 0, 0]);
+    const [userAccountFetched, setUserAccountFetched] = useState<boolean>(false);
 
     const [market, setMarket] = useState<anchor.IdlAccounts<Balex>['lexMarket']>(null)
     
@@ -255,6 +257,7 @@ export const UserAccount = () => {
         const account = await program.account.userAccount.fetchNullable((await getUserAccount(wallet))[0]);
         if (account) {
             setUserAccount(account);
+            setUserAccountFetched(true);
         }
     }
     async function createUserAccount() {
@@ -285,10 +288,20 @@ export const UserAccount = () => {
     }, [program]);
 
     useEffect(() => {
-        if(userAccount) {
+        if(userAccountFetched) {
             registerUserChangeHook();
         }
-    }, [userAccount]);
+    }, [userAccountFetched]);
+
+    async function updateUserStat() {
+        setUserStat(await getUserStat(userAccount, program))
+    }
+
+    useEffect(() => {
+        if(userAccount) {
+            updateUserStat();
+        }
+    }, [userAccount])
 
     if (userAccount) {
         return (
@@ -296,6 +309,7 @@ export const UserAccount = () => {
                 <antd.Row>
                     <antd.Col>
                         Your Total BTC is {userAccount.quoteTotal.toNumber()} and available USDT is {userAccount.baseFree.toNumber()}
+                        <br/>Your health is {userStat[0]}%. Max Withdraw of BTC: {userStat[1]}. Max Borrow of USDT: {userStat[2]}.
                         {userAccount.baseOpenBorrow.toNumber() > 0 && (
                             <div>
                                 <br />
@@ -314,6 +328,7 @@ export const UserAccount = () => {
                                 Open value to lend is {userAccount.baseLocked.toNumber()}
                             </div>
                         )}
+                        
                     </antd.Col>
                 </antd.Row>
                 {market && (
@@ -714,41 +729,179 @@ export const OpenOrders = ({userAccount}: {userAccount: IdlAccounts<Balex>['user
     </antd.Card>)
 }
 
+type DebtType = {
+    borrower: PublicKey,
+    lender: PublicKey,
+    interestRate: anchor.BN,
+    liquidQty: anchor.BN,
+    qty: anchor.BN,
+    timestamp: anchor.BN
+}
+
+function getDebtAsOfNow(debt: DebtType): number {
+    let diff_timestamp = Date.now()/1000 - debt.timestamp.toNumber();
+    let nowDebt = debt.qty.toNumber();
+    console.log(diff_timestamp);
+    console.log(nowDebt);
+    nowDebt = nowDebt + diff_timestamp*debt.interestRate.toNumber() / (60*60*100)
+    nowDebt = Math.ceil(nowDebt);
+    return nowDebt - debt.liquidQty.toNumber(); 
+}
+
+async function getTotalDebtToPay(userAccount: IdlAccounts<Balex>['userAccount'], program: Program<Balex>): Promise<number> {
+    let marketData = await program.account.lexMarket.fetch(lexMarketPubkey);
+
+    let totalDebt: number = 0;
+    for (let i = 0; i < userAccount.openDebtsCnt; i++) {
+        let debt_id = userAccount.openDebts[i];
+        let debt: DebtType = marketData.debts[debt_id]
+        totalDebt +=  getDebtAsOfNow(debt);
+    }
+
+    return totalDebt;
+}
+
+async function getOraclePrice(oracle: PublicKey, type: any, program: Program<Balex>): Promise<number> {
+    // Only stub oracle for now
+    let stubData = await program.account.stubPrice.fetch(oracle);
+    return stubData.price.toNumber();
+}
+
+// returns health, max withdraw, max borrow
+async function getUserStat(userAccount: IdlAccounts<Balex>['userAccount'], program: Program<Balex>): Promise<[number, number, number]> {
+    let marketData = await program.account.lexMarket.fetch(lexMarketPubkey);
+    let totalDebt = await getTotalDebtToPay(userAccount, program);
+
+
+    let price = await getOraclePrice(marketData.priceOracle, marketData.oracleType, program);
+
+    let maxBorrow = 100 * userAccount.quoteTotal.toNumber() * price / (100 + marketData.overCollateralPercent) - totalDebt;
+
+    if (totalDebt < 1) {
+        return [100, marketData.quoteTotal.toNumber(), maxBorrow];
+    }
+
+    let maxWithdraw = userAccount.quoteTotal.toNumber() - (totalDebt * (100 + marketData.overCollateralPercent)/(100*price)) 
+    let health = 10000 * userAccount.quoteTotal.toNumber() * price / (totalDebt * (100 + marketData.overCollateralPercent/2))
+
+    health = Math.floor(health);
+
+    return [health, maxWithdraw, maxBorrow];
+}
+
+
 export const OpenDebts = ({userAccount}: {userAccount: IdlAccounts<Balex>['userAccount']}) => {
     const wallet = useAnchorWallet();
     const program = useProgram(wallet);
 
-    type DebtType = {
-        borrower: PublicKey,
-        lender: PublicKey,
-        interestRate: anchor.BN,
-        liquidQty: anchor.BN,
-        qty: anchor.BN,
-        timestamp: anchor.BN
+    type DebtRow = {
+        'id': number,
+        'type': string,
+        'qty': number,
+        'interest': number,
+        'liquid_qty': number
+        'remaining': number,
     }
 
+    async function settleDown(debt_id: number) {
+        let marketData = await program.account.lexMarket.fetch(lexMarketPubkey);
+        let debt: DebtType = marketData.debts[debt_id]
+        let [borrowAccount, bump] = await getUserAccount(wallet)
+        //Make sure user has balance (but not right now), or error if doesn't
+        const lenderAccount =  (await PublicKey.findProgramAddress(
+            [lexMarketPubkey.toBuffer(), debt.lender.toBuffer()], programId
+        ))[0];
+        console.log(lenderAccount.toString())
+        await program.rpc.settleDebt(bump, debt_id, {
+            accounts: {
+                owner: wallet.publicKey,
+                borrowerAccount: borrowAccount,
+                lenderAccount: lenderAccount,
+                market: lexMarketPubkey
+            }
+        })
+    }
 
+    const columns: antd.TableColumnsType = [
+        {
+            title: 'Id',
+            dataIndex: 'id',
+            key: 'id',
+        },
+        {
+            title: 'Type',
+            dataIndex: 'type',
+            key: 'type',
+        },
+        {
+            title: 'Amount',
+            dataIndex: 'qty',
+            key: 'qty',
+        },
+        {
+            title: 'Interest Rate',
+            dataIndex: 'interest',
+            key: 'interest'
+        },
+        {
+            title: 'Liquidated Amount',
+            dataIndex: 'liquid_qty',
+            key: 'liquid_qty'
+        },
+        {
+            title: 'Amount To Receive/Pay',
+            dataIndex: 'remaining',
+            key: 'remaining'
+        },
+        {
+            title: 'Action',
+            key: 'action',
+            render: (value, record: DebtRow, index) => {
+                if (record.type == "Borrow") {
+                    return (<antd.Button onClick={() => settleDown(record.id)} >Settle</antd.Button>)
+                } else {
+                    return (<div></div>)
+                }
+            }
+        }
+    ]
 
-    const [borrowDebts, setBorrowDebts] = useState<DebtType[]>([])
-    const [lendDebts, setLendDebts] = useState<DebtType[]>([])
+    const [debts, setDebts] = useState<DebtRow[]>([])
 
     async function updateDebts() {
         let marketData = await program.account.lexMarket.fetch(lexMarketPubkey);
         console.log(marketData.debts)
 
+        let curr_debts: DebtRow[] = []
         for (let i = 0; i < userAccount.openDebtsCnt; i++) {
             let debt_id = userAccount.openDebts[i];
             let debt: DebtType = marketData.debts[debt_id]
+            console.log(debt);
+
+            curr_debts.push( {
+                id: debt_id,
+                type: (debt.borrower.equals(wallet.publicKey) ? 'Borrow': 'Lend'),
+                qty: debt.qty.toNumber(),
+                interest: debt.interestRate.toNumber(),
+                liquid_qty: debt.liquidQty.toNumber(),
+                remaining: getDebtAsOfNow(debt)
+            })
         }
+
+        setDebts(curr_debts);
     }
 
     useEffect(() => {
         updateDebts();
     }, [userAccount])
+    useInterval(() => {
+        updateDebts();
+    }, 5000)
 
 
     return (
         <antd.Card title="Open Debts">
+            <antd.Table columns={columns} dataSource={debts} rowKey="id" pagination={false}/>
         </antd.Card>
     )
 }
