@@ -11,7 +11,7 @@ use spl_associated_token_account::{get_associated_token_address};
 use std::str::FromStr;
 
 use agnostic_orderbook::state::{
-    MarketState, MARKET_STATE_LEN,
+    MarketState, MARKET_STATE_LEN, get_side_from_order_id, Side,
 };
 use balex::state::{UserAccount, get_user_health_factor, get_user_total_debt, get_user_health_factor_after_liquid};
 use balex::instruction::{CancelRiskyOrder as CancelRiskyOrderInst, LiquidateDebts as LiquidateDebtsInst};
@@ -75,7 +75,7 @@ impl Context {
         loop {
             let res = self.try_liquidate(&connection, orderbook, &program);
             println!("{:#?}", res);
-            thread::sleep(time::Duration::from_secs(5));
+            thread::sleep(time::Duration::from_secs(1));
         }
     }
 
@@ -122,7 +122,13 @@ impl Context {
             println!("health {}", health);
 
             if health < 100 {
-                if user_account.open_orders_cnt > 0 {
+                for i in 0..user_account.open_orders_cnt as usize {
+                    let order_id = user_account.open_orders[i];
+
+                    if let Side::Ask = get_side_from_order_id(order_id) {
+                        continue;
+                    }
+
                     let mut request = program.request();
                     request = request.accounts(CancelRiskyOrderAccount {
                         owner: user_account.owner,
