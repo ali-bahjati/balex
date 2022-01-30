@@ -87,7 +87,7 @@ export default function OpenOrders({userAccount}: {userAccount: IdlAccounts<Bale
                 <span className='label'>Order</span>
                 <span className='label'>Amount</span>
                 <span className='label'>Interest Rate</span>
-                <span className='label'></span>
+                <span className='label'>Cancel</span>
             </div>
 
             <Divider marginTop='0px' />
@@ -95,7 +95,7 @@ export default function OpenOrders({userAccount}: {userAccount: IdlAccounts<Bale
             { openOrders.map( (order: OrderType) => 
             (
                 <div key={order.order_id.toString()} className='flex mt-5'>
-                    <span className={"label " +  (order.type == "Borrow" ? "clr-red" : "clr-green")}>{order.type}</span>
+                    <span className={"label " +  (order.type == "Lend" ? "clr-red" : "clr-green")}>{order.type}</span>
                     <span className='label'>{order.size}</span>
                     <span className='label'>{order.price}%</span>
                     <span className='label'><AiOutlineDelete style={{ color: 'white', cursor: 'pointer' }} onClick={() => cancelOrder(order.order_id)} /></span>
