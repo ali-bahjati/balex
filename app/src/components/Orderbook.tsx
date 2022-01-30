@@ -13,7 +13,7 @@ export default function OpenOrders() {
     };
 
     return (
-        <div className='card' style={{ flex: '1', minHeight: '200px', display: 'flex', justifyContent: 'start' }}>
+        <div className='card' style={{ flex: '1', minHeight: '465px', display: 'flex', justifyContent: 'start' }}>
             <div className='title'>Orderbook</div>
 
             <div className='text'>

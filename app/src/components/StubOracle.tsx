@@ -33,20 +33,19 @@ import { lexMarketPubkey, stubOracle } from '../settings';
 
     return (
         <div className='card'>
-            <div className='title'>New Order</div>
+            <div className='title'>Stub Price Oracle</div>
 
             <div className='text'>
-                <span className='label'>Amount</span>
-                <input defaultValue={amount} onChange={(e) => setAmount(parseInt(e.target.value))} />
+                <span className='label'>Current price</span>
+                <span className='value'>0</span>
             </div>
             <div className='text'>
-                <span className='label'>Interest rate</span>
+                <span className='label'>Amount to set</span>
                 <input defaultValue={rate} onChange={(e) => setRate(parseInt(e.target.value))} />
             </div>
 
             <div className='flex mt-5'>
-                <button onClick={() => newOrder(0)}>Borrow</button>
-                <button className='ml-5' onClick={() => newOrder(1)}>Lend</button>
+                <button onClick={() => newOrder(0)}>Set Price</button>
             </div>
         </div>
     )

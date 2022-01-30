@@ -9,7 +9,7 @@ import * as anchor from '@project-serum/anchor';
 import { getPriceFromKey, MarketState } from '@bonfida/aaob';
 import { lexMarketPubkey } from '../settings';
 
-export default function OpenOrders({userAccount}: {userAccount: IdlAccounts<Balex>['userAccount']}) {
+export default function OpenDebts({userAccount}: {userAccount: IdlAccounts<Balex>['userAccount']}) {
     const wallet = useAnchorWallet();
     const program = useProgram(wallet);
 
@@ -81,27 +81,20 @@ export default function OpenOrders({userAccount}: {userAccount: IdlAccounts<Bale
 
     return (
         <div className='card' style={{ flex: '1', minHeight: '320px', display: 'flex', justifyContent: 'start' }}>
-            <div className='title'>Open Orders</div>
+            <div className='title'>Open Debts</div>
 
             <div className='text'>
-                <span className='label'>Order</span>
+                <span className='label'>Id</span>
+                <span className='label'>Type</span>
                 <span className='label'>Amount</span>
                 <span className='label'>Interest Rate</span>
-                <span className='label'></span>
+                <span className='label'>Liquidated Amount</span>
+                <span className='label'>Amount To Receive/Pay</span>
+                <span className='label'>Action</span>
             </div>
 
             <Divider marginTop='0px' />
 
-            { openOrders.map( (order: OrderType) => 
-            (
-                <div key={order.order_id.toString()} className='flex mt-5'>
-                    <span className={"label " +  (order.type == "Borrow" ? "clr-red" : "clr-green")}>{order.type}</span>
-                    <span className='label'>{order.size}</span>
-                    <span className='label'>{order.price}%</span>
-                    <span className='label'><AiOutlineDelete style={{ color: 'white', cursor: 'pointer' }} onClick={() => cancelOrder(order.order_id)} /></span>
-                </div>
-            )
-            )}
         </div>
     )
 }

@@ -74,6 +74,7 @@ input {
     color           : #e5e3ec;
     padding         : 0px 10px;
     text-align      : end;
+    max-width: 150px;
 }
 
 input:focus,
