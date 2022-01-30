@@ -29,6 +29,7 @@ import { getUserAccount, useProgram } from './utils';
 import { lexMarketPubkey } from './settings';
 
 import Orderbook from './components/Orderbook';
+import { createRequire } from 'module';
 
 //
 // Configurations.
@@ -41,7 +42,12 @@ export const App = () => {
         <WalletContext>
             <React.Fragment>
                 <div className='header'>
-                    <WalletMultiButton />
+                    <div style={{ flex: '1' }}>
+                        <img height={36} src={require("./assets/BalexLogo.png")}></img>
+                    </div>
+                    <div style={{ width: '190px', display: 'flex', justifyContent: 'end' }}>
+                        <WalletMultiButton />
+                    </div>
                 </div>
                 <Core />
                 {/* <Footer /> */}
@@ -139,8 +145,8 @@ const Core = () => {
             </div>
 
             <div style={{ height: '100%', display: 'flex', flex: '1' }}>
-                <NewOrder userAccount={userAccount}/>
-                <OpenOrders userAccount={userAccount}/>
+                <NewOrder userAccount={userAccount} />
+                <OpenOrders userAccount={userAccount} />
             </div>
         </div>
     );
