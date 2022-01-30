@@ -120,6 +120,10 @@ pub fn liquidate_debts(ctx: Context<LiquidateDebts>, debts_id: Vec<u16>, debts_a
         let debt_id = debts_id[i];
         let amount = debts_amount[i];
 
+        if amount == 0 {
+            continue;
+        }
+
         let debt: &mut Debt = &mut market.debts[debt_id as usize];
         if debt.borrower != borrower_account.owner {
             msg!("Borrower is not borrower of this debt {}", debt_id);

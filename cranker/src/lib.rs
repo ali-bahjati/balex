@@ -1,3 +1,4 @@
+use std::str::FromStr;
 use std::{cell::RefCell, rc::Rc};
 use std::{thread, time};
 use anchor_client::solana_sdk::commitment_config::CommitmentConfig;
@@ -44,7 +45,7 @@ pub const MAX_NUMBER_OF_USER_ACCOUNTS: usize = 20;
 
 impl Context {
     pub fn crank(self) {
-        let url = Cluster::Devnet;
+        let url = Cluster::from_str(&self.endpoint[..]).unwrap();
         let fee_payer_copy = Keypair::from_bytes(&self.fee_payer.to_bytes()[..]).unwrap();
  
         let client = Client::new_with_options(url, Rc::new(fee_payer_copy), CommitmentConfig::confirmed());

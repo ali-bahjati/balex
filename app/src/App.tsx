@@ -221,6 +221,8 @@ export const UserAccount = () => {
     const program = useProgram(wallet);
 
     const [userAccount, setUserAccount] = useState<anchor.IdlAccounts<Balex>['userAccount']>(null);
+    const [userStat, setUserStat] = useState<[number, number, number]>([0, 0, 0]);
+    const [userAccountFetched, setUserAccountFetched] = useState<boolean>(false);
 
     const [market, setMarket] = useState<anchor.IdlAccounts<Balex>['lexMarket']>(null)
 
@@ -239,6 +241,7 @@ export const UserAccount = () => {
         const account = await program.account.userAccount.fetchNullable((await getUserAccount(wallet))[0]);
         if (account) {
             setUserAccount(account);
+            setUserAccountFetched(true);
         }
     }
     async function createUserAccount() {
@@ -271,7 +274,17 @@ export const UserAccount = () => {
         if (userAccount) {
             registerUserChangeHook();
         }
-    }, [userAccount]);
+    }, [userAccountFetched]);
+
+    async function updateUserStat() {
+        setUserStat(await getUserStat(userAccount, program))
+    }
+
+    useEffect(() => {
+        if(userAccount) {
+            updateUserStat();
+        }
+    }, [userAccount])
 
     if (userAccount) {
         return (
@@ -279,6 +292,7 @@ export const UserAccount = () => {
                 <antd.Row>
                     <antd.Col>
                         Your Total BTC is {userAccount.quoteTotal.toNumber()} and available USDT is {userAccount.baseFree.toNumber()}
+                        <br/>Your health is {userStat[0]}%. Max Withdraw of BTC: {userStat[1]}. Max Borrow of USDT: {userStat[2]}.
                         {userAccount.baseOpenBorrow.toNumber() > 0 && (
                             <div>
                                 <br />
@@ -297,6 +311,7 @@ export const UserAccount = () => {
                                 Open value to lend is {userAccount.baseLocked.toNumber()}
                             </div>
                         )}
+                        
                     </antd.Col>
                 </antd.Row>
                 {market && (
