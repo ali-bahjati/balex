@@ -9,11 +9,11 @@ import * as anchor from '@project-serum/anchor';
 import { getPriceFromKey, MarketState } from '@bonfida/aaob';
 import { lexMarketPubkey } from '../settings';
 
-export default function OpenOrders({userAccount}: {userAccount: IdlAccounts<Balex>['userAccount']}) {
+export default function OpenOrders({ userAccount }: { userAccount: IdlAccounts<Balex>['userAccount'] }) {
     const wallet = useAnchorWallet();
     const program = useProgram(wallet);
 
-    type OrderType = {type: string, size: number, price: number, order_id: anchor.BN}
+    type OrderType = { type: string, size: number, price: number, order_id: anchor.BN }
 
     const [openOrders, setOpenOrders] = useState<OrderType[]>([])
 
@@ -25,13 +25,13 @@ export default function OpenOrders({userAccount}: {userAccount: IdlAccounts<Bale
         const bidData = await marketData.loadBidsSlab(connection, 'confirmed')
 
         let openOrders: OrderType[] = []
-        for (let i = 0; i < userAccount.openOrdersCnt; i++) { 
+        for (let i = 0; i < userAccount.openOrdersCnt; i++) {
             const order_id = userAccount.openOrders[i]
 
             let askNode = askData.getNodeByKey(order_id as any);
             if (askNode) {
                 let size = askNode.baseQuantity.toNumber()
-                openOrders.push({type: "Lend", price: getPriceFromKey(order_id).toNumber(), order_id: order_id, size: size})
+                openOrders.push({ type: "Lend", price: getPriceFromKey(order_id).toNumber(), order_id: order_id, size: size })
             } else {
                 let bidNode = bidData.getNodeByKey(order_id as any);
                 if (bidNode) {
@@ -41,7 +41,7 @@ export default function OpenOrders({userAccount}: {userAccount: IdlAccounts<Bale
                     console.log("Strange!");
                     continue;
                 }
-            } 
+            }
         }
 
         openOrders.sort((a, b) => a.price - b.price)
@@ -84,21 +84,21 @@ export default function OpenOrders({userAccount}: {userAccount: IdlAccounts<Bale
             <div className='title'>Open Orders</div>
 
             <div className='text'>
-                <span className='label'>Order</span>
-                <span className='label'>Amount</span>
-                <span className='label'>Interest Rate</span>
-                <span className='label'>Cancel</span>
+                <span className='label' style={{ flex: 3 }}>Order</span>
+                <span className='label' style={{ flex: 3 }}>Amount</span>
+                <span className='label' style={{ flex: 5 }}>Interest Rate</span>
+                <span className='label' style={{ flex: 2, display: 'flex', justifyContent: 'center' }}>Cancel</span>
             </div>
 
             <Divider marginTop='0px' />
 
-            { openOrders.map( (order: OrderType) => 
+            {openOrders.map((order: OrderType) =>
             (
                 <div key={order.order_id.toString()} className='flex mt-5'>
-                    <span className={"label " +  (order.type == "Lend" ? "clr-red" : "clr-green")}>{order.type}</span>
-                    <span className='label'>{order.size}</span>
-                    <span className='label'>{order.price}%</span>
-                    <span className='label'><AiOutlineDelete style={{ color: 'white', cursor: 'pointer' }} onClick={() => cancelOrder(order.order_id)} /></span>
+                    <span className={"label " + (order.type == "Lend" ? "clr-red" : "clr-green")} style={{ flex: 3 }}>{order.type}</span>
+                    <span className='label' style={{ flex: 3 }}>{order.size}</span>
+                    <span className='label' style={{ flex: 5 }}>{order.price}%</span>
+                    <span className='label' style={{ flex: 2, display: 'flex', justifyContent: 'center' }}><AiOutlineDelete style={{ color: 'white', cursor: 'pointer' }} onClick={() => cancelOrder(order.order_id)} /></span>
                 </div>
             )
             )}

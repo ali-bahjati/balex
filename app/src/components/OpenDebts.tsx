@@ -10,7 +10,7 @@ import { getPriceFromKey, MarketState } from '@bonfida/aaob';
 import { lexMarketPubkey, programId } from '../settings';
 import { PublicKey } from '@solana/web3.js';
 
-export default function OpenDebts({userAccount}: {userAccount: IdlAccounts<Balex>['userAccount']}) {
+export default function OpenDebts({ userAccount }: { userAccount: IdlAccounts<Balex>['userAccount'] }) {
     const wallet = useAnchorWallet();
     const program = useProgram(wallet);
 
@@ -28,7 +28,7 @@ export default function OpenDebts({userAccount}: {userAccount: IdlAccounts<Balex
         let debt: DebtType = marketData.debts[debt_id]
         let [borrowAccount, bump] = await getUserAccount(wallet)
         //Make sure user has balance (but not right now), or error if doesn't
-        const lenderAccount =  (await PublicKey.findProgramAddress(
+        const lenderAccount = (await PublicKey.findProgramAddress(
             [lexMarketPubkey.toBuffer(), debt.lender.toBuffer()], programId
         ))[0];
         console.log(lenderAccount.toString())
@@ -54,9 +54,9 @@ export default function OpenDebts({userAccount}: {userAccount: IdlAccounts<Balex
             let debt: DebtType = marketData.debts[debt_id]
             console.log(debt);
 
-            curr_debts.push( {
+            curr_debts.push({
                 id: debt_id,
-                type: (debt.borrower.equals(wallet.publicKey) ? 'Borrow': 'Lend'),
+                type: (debt.borrower.equals(wallet.publicKey) ? 'Borrow' : 'Lend'),
                 qty: debt.qty.toNumber(),
                 interest: debt.interestRate.toNumber(),
                 liquid_qty: debt.liquidQty.toNumber(),
@@ -81,30 +81,30 @@ export default function OpenDebts({userAccount}: {userAccount: IdlAccounts<Balex
             <div className='title'>Open Debts</div>
 
             <div className='text'>
-                <span className='label'>Type</span>
-                <span className='label'>Amount</span>
-                <span className='label'>Interest Rate</span>
-                <span className='label'>Liquidated Amount</span>
-                <span className='label'>Amount To Receive/Pay</span>
-                <span className='label'>Settle</span>
+                <span className='label' style={{ flex: 3 }}>Type</span>
+                <span className='label' style={{ flex: 3 }}>Amount</span>
+                <span className='label' style={{ flex: 3 }}>Interest Rate</span>
+                <span className='label' style={{ flex: 4 }}>Liquidated Amount</span>
+                <span className='label' style={{ flex: 5 }}>Amount To Receive/Pay</span>
+                <span className='label' style={{ flex: 2, display: 'flex', justifyContent: 'center' }}>Settle</span>
             </div>
 
             <Divider marginTop='0px' />
 
-            { debts.map( (debt) => (
+            {debts.map((debt) => (
 
-            <div key={debt.id} className='text'>
-                <span className='label'>{debt.type}</span>
-                <span className='label'>{debt.qty}</span>
-                <span className='label'>{debt.interest}%</span>
-                <span className='label'>{debt.liquid_qty}</span>
-                <span className='label'>{debt.remaining}</span>
-                <span className='label'>
-                { debt.type == "Borrow" && 
-                    <span className='label'><GiPayMoney style={{ color: 'white', cursor: 'pointer' }} onClick={() => settleDown(debt.id)} /></span>
-                }   
-                </span>
-            </div>
+                <div key={debt.id} className='text'>
+                    <span className='label' style={{ flex: 3 }}>{debt.type}</span>
+                    <span className='label' style={{ flex: 3 }}>{debt.qty}</span>
+                    <span className='label' style={{ flex: 3 }}>{debt.interest}%</span>
+                    <span className='label' style={{ flex: 4 }}>{debt.liquid_qty}</span>
+                    <span className='label' style={{ flex: 5 }}>{debt.remaining}</span>
+                    <span className='label' style={{ flex: 2, display: 'flex', justifyContent: 'center' }}>
+                        {debt.type == "Borrow" &&
+                            <span className='label'><GiPayMoney style={{ color: 'white', cursor: 'pointer' }} onClick={() => settleDown(debt.id)} /></span>
+                        }
+                    </span>
+                </div>
             ))}
 
         </div>
