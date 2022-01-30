@@ -6,7 +6,7 @@ import { getMarketAccounts, getUserAccount, useProgram } from '../utils';
 import * as anchor from '@project-serum/anchor';
 import { lexMarketPubkey, stubOracle } from '../settings';
 
- export default function NewOrde({userAccount}: {userAccount: IdlAccounts<Balex>['userAccount']}) {
+ export default function NewOrder({userAccount}: {userAccount: IdlAccounts<Balex>['userAccount']}) {
      const [amount, setAmount] = useState<number>(0)
      const [rate, setRate] = useState<number>(0)
      const wallet = useAnchorWallet();

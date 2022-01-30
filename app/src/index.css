@@ -123,3 +123,11 @@ button {
 button:hover {
     background-color: #543CDF;
 }
+
+.clr-green {
+    color: green !important;
+}
+
+.clr-red {
+    color: red !important;
+}

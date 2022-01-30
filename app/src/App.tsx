@@ -140,7 +140,7 @@ const Core = () => {
 
             <div style={{ height: '100%', display: 'flex', flex: '1' }}>
                 <NewOrder userAccount={userAccount}/>
-                <OpenOrders />
+                <OpenOrders userAccount={userAccount}/>
             </div>
         </div>
     );
