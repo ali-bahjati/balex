@@ -101,7 +101,7 @@ export default function OpenDebts({ userAccount }: { userAccount: IdlAccounts<Ba
                     <span className='label' style={{ flex: 5 }}>{debt.remaining}</span>
                     <span className='label' style={{ flex: 2, display: 'flex', justifyContent: 'center' }}>
                         {debt.type == "Borrow" &&
-                            <span className='label'><GiPayMoney style={{ color: 'white', cursor: 'pointer' }} onClick={() => settleDown(debt.id)} /></span>
+                            <GiPayMoney style={{ color: 'white', cursor: 'pointer' }} onClick={() => settleDown(debt.id)} />
                         }
                     </span>
                 </div>

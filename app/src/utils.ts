@@ -103,7 +103,9 @@ export async function getTotalDebtToPay(userAccount: IdlAccounts<Balex>['userAcc
     for (let i = 0; i < userAccount.openDebtsCnt; i++) {
         let debt_id = userAccount.openDebts[i];
         let debt: DebtType = marketData.debts[debt_id]
-        totalDebt +=  getDebtAsOfNow(debt);
+        if (debt.borrower.equals(userAccount.owner)) {
+            totalDebt += getDebtAsOfNow(debt);
+        }
     }
 
     return totalDebt;
@@ -115,8 +117,8 @@ export async function getOraclePrice(oracle: PublicKey, type: any, program: Prog
     return stubData.price.toNumber();
 }
 
-// returns health, max withdraw, max borrow
-export async function getUserStat(userAccount: IdlAccounts<Balex>['userAccount'], program: Program<Balex>): Promise<[number, number, number]> {
+// returns health, max withdraw, max borrow, total debt
+export async function getUserStat(userAccount: IdlAccounts<Balex>['userAccount'], program: Program<Balex>): Promise<[number, number, number, number]> {
     let marketData = await program.account.lexMarket.fetch(lexMarketPubkey);
     let totalDebt = await getTotalDebtToPay(userAccount, program);
 
@@ -126,7 +128,7 @@ export async function getUserStat(userAccount: IdlAccounts<Balex>['userAccount']
     let maxBorrow = 100 * userAccount.quoteTotal.toNumber() * price / (100 + marketData.overCollateralPercent) - totalDebt;
 
     if (totalDebt < 1) {
-        return [100, marketData.quoteTotal.toNumber(), maxBorrow];
+        return [100, marketData.quoteTotal.toNumber(), maxBorrow, totalDebt];
     }
 
     let maxWithdraw = userAccount.quoteTotal.toNumber() - (totalDebt * (100 + marketData.overCollateralPercent)/(100*price)) 
@@ -134,5 +136,5 @@ export async function getUserStat(userAccount: IdlAccounts<Balex>['userAccount']
 
     health = Math.floor(health);
 
-    return [health, maxWithdraw, maxBorrow];
+    return [health, maxWithdraw, maxBorrow, totalDebt];
 }
