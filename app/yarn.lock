@@ -1131,11 +1131,6 @@
     assert "^2.0.0"
     buffer "^6.0.1"
 
-"@react-icons/all-files@^4.3.1":
-  version "4.0.0"
-  resolved "https://registry.yarnpkg.com/@react-icons/all-files/-/all-files-4.0.0.tgz#b5a21122717c4fc772cfc8dfc749fe32744abf70"
-  integrity sha512-Ka6ZE7tck7i7v2sagEeNMfby30zzQVuiZqiEwf6vcJxdJWpM6T496w8bXYv/6svKy47vfzBCbgv1rE37empRrw==
-
 "@solana/buffer-layout@^3.0.0":
   version "3.0.0"
   resolved "https://registry.yarnpkg.com/@solana/buffer-layout/-/buffer-layout-3.0.0.tgz#b9353caeb9a1589cb77a1b145bcb1a9a93114326"
@@ -5214,6 +5209,11 @@ react-dom@^17.0.0:
     loose-envify "^1.1.0"
     object-assign "^4.1.1"
     scheduler "^0.20.2"
+
+react-icons@^4.3.1:
+  version "4.3.1"
+  resolved "https://registry.yarnpkg.com/react-icons/-/react-icons-4.3.1.tgz#2fa92aebbbc71f43d2db2ed1aed07361124e91ca"
+  integrity sha512-cB10MXLTs3gVuXimblAdI71jrJx8njrJZmNMEMC+sQu5B/BIOmlsAjskdqpn81y8UBVEGuHODd7/ci5DvoSzTQ==
 
 react-is@^16.12.0, react-is@^16.13.1:
   version "16.13.1"

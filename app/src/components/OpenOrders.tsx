@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import Divider from './Divider';
-import { AiOutlineDelete } from "@react-icons/all-files/ai/AiOutlineDelete";
+import { AiOutlineDelete } from "react-icons/ai";
 import { IdlAccounts } from '@project-serum/anchor';
 import { Balex } from '../types/balex';
 import { useAnchorWallet } from '@solana/wallet-adapter-react';

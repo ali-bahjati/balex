@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import Divider from './Divider';
-import { GiPayMoney } from "@react-icons/all-files/gi/GIPayMoney";
+import { GiPayMoney } from "react-icons/gi";
 import { IdlAccounts } from '@project-serum/anchor';
 import { Balex } from '../types/balex';
 import { useAnchorWallet } from '@solana/wallet-adapter-react';
