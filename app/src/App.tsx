@@ -12,11 +12,6 @@ import { clusterApiUrl, Keypair, SystemProgram, Transaction } from '@solana/web3
 import * as anchor from '@project-serum/anchor';
 import { PublicKey } from '@solana/web3.js';
 
-import 'antd/dist/antd.css';
-import './index.css';
-
-import { Layout } from 'antd';
-import * as antd from 'antd';
 import React, { ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Balex } from './types/balex';
 import balexIdl from './idl/balex.json';
@@ -26,7 +21,10 @@ import { getPriceFromKey, MarketState } from '@bonfida/aaob';
 import { IdlAccounts, Program } from '@project-serum/anchor';
 import { WalletAdapterNetwork } from '@solana/wallet-adapter-base';
 
-const { Header, Content } = Layout;
+import './index.css';
+import Account from './components/Account';
+import NewOrder from './components/NewOrder';
+import OpenOrders from './components/OpenOrders';
 
 //
 // Configurations.
@@ -36,22 +34,22 @@ const programId = new PublicKey(balexIdl.metadata.address);
 const lexMarketPubkey = new PublicKey('BkBNRBCxYic4ZrmUGNLasm2FNJw25PbmhfjcChK5D2GE');
 
 const admin = anchor.web3.Keypair.fromSecretKey(new Uint8Array([
-    108,  38, 107, 182,  51,  43, 128, 137,  35, 240,  23,
-    174, 102,  51,  10, 255, 156, 179, 109,  42, 238,  99,
-     14, 237,  85,  34, 172, 211, 126, 239, 202,  90,  11,
-    148, 123, 175,  92,  85, 159,  13, 151,  70, 127, 142,
-    100,  41, 117,  55,  54,  67,  59,  49,  52,   6,  92,
-    240,  83, 236, 155, 161,  52,  91,  51, 246
+    108, 38, 107, 182, 51, 43, 128, 137, 35, 240, 23,
+    174, 102, 51, 10, 255, 156, 179, 109, 42, 238, 99,
+    14, 237, 85, 34, 172, 211, 126, 239, 202, 90, 11,
+    148, 123, 175, 92, 85, 159, 13, 151, 70, 127, 142,
+    100, 41, 117, 55, 54, 67, 59, 49, 52, 6, 92,
+    240, 83, 236, 155, 161, 52, 91, 51, 246
 ]));
 
 const stubOracle = anchor.web3.Keypair.fromSecretKey(
     new Uint8Array([
-        145, 104,  65, 171,  46,  67,  64, 252,  60, 118, 148,
-        44,  18, 145, 188, 173, 150, 230,  56, 202,  17, 188,
-        16, 243, 180,  56, 133,  63, 126,  15, 188,  52, 202,
-       223, 160, 168, 184,  60, 186, 188,  21, 119,  68,   6,
-       142, 204, 110, 254, 245,  90,  84,  34,  86, 101, 139,
-        32, 115, 139, 236, 182, 100,  56,   4, 172
+        145, 104, 65, 171, 46, 67, 64, 252, 60, 118, 148,
+        44, 18, 145, 188, 173, 150, 230, 56, 202, 17, 188,
+        16, 243, 180, 56, 133, 63, 126, 15, 188, 52, 202,
+        223, 160, 168, 184, 60, 186, 188, 21, 119, 68, 6,
+        142, 204, 110, 254, 245, 90, 84, 34, 86, 101, 139,
+        32, 115, 139, 236, 182, 100, 56, 4, 172
     ])
 );
 
@@ -90,11 +88,13 @@ function getProvider(wallet: AnchorWallet) {
 
 function useProgram(wallet: AnchorWallet): anchor.Program<Balex> {
     return useMemo(() => {
+        console.log(wallet);
         if (!wallet) {
             return null;
         }
+        console.log(wallet);
         const program: anchor.Program<Balex> = new anchor.Program<Balex>(balexIdl as any, programId, getProvider(wallet));
-        console.log(program);
+        console.log("HI" + program);
         return program;
     }, [wallet]);
 }
@@ -112,7 +112,7 @@ async function getMarketSinger() {
 
 async function getMarketAccounts(program: Program<Balex>): Promise<[PublicKey, PublicKey, PublicKey, PublicKey]> {
     const marketData = await program.account.lexMarket.fetch(lexMarketPubkey);
-    
+
     const orderbook = marketData.orderbook;
 
     const orderbookData = await MarketState.retrieve(program.provider.connection, orderbook, 'confirmed')
@@ -124,21 +124,11 @@ export const App = () => {
     return (
         <WalletContext>
             <React.Fragment>
-                <Layout
-                    style={{
-                        display: 'flex',
-                        minHeight: '100vh',
-                        flexDirection: 'column',
-                    }}
-                >
-                    <Header style={{ padding: 10, minHeight: 64, height: 'unset' }}>
-                        <WalletMultiButton />
-                    </Header>
-                    <Content style={{ flex: 1, padding: 10 }}>
-                        <Core />
-                    </Content>
-                    {/* <Footer /> */}
-                </Layout>
+                <div className='header'>
+                    <WalletMultiButton />
+                </div>
+                <Core />
+                {/* <Footer /> */}
             </React.Fragment>
         </WalletContext>
     );
@@ -151,7 +141,7 @@ const WalletContext = ({ children }: { children: ReactNode }) => {
     // const endpoint = 'http://localhost:8899';
 
     const wallets = useMemo(
-        () => [new PhantomWalletAdapter(), new SolletExtensionWalletAdapter({network})],
+        () => [new PhantomWalletAdapter(), new SolletExtensionWalletAdapter({ network })],
         [] //[network]
     );
 
@@ -165,12 +155,75 @@ const WalletContext = ({ children }: { children: ReactNode }) => {
 };
 
 const Core = () => {
+    const wallet = useAnchorWallet();
+    const program = useProgram(wallet);
+
+    const [userAccount, setUserAccount] = useState<anchor.IdlAccounts<Balex>['userAccount']>(null);
+
+    const [market, setMarket] = useState<anchor.IdlAccounts<Balex>['lexMarket']>(null)
+
+    useEffect(() => {
+        if (!program) {
+            return null;
+        }
+        const f = async () => {
+            const account: any = await program.account.lexMarket.fetch(lexMarketPubkey);
+            setMarket(account);
+        };
+        f();
+    }, [program]);
+
+    async function loadUserAccount() {
+        const account = await program.account.userAccount.fetchNullable((await getUserAccount(wallet))[0]);
+        console.log(account);
+        if (account) {
+            setUserAccount(account);
+        }
+    }
+    async function createUserAccount() {
+        const [userPub, bump] = await getUserAccount(wallet);
+
+        await program.rpc.initializeAccount(bump, {
+            accounts: {
+                market: lexMarketPubkey,
+                owner: wallet.publicKey,
+                userAccount: userPub,
+                systemProgram: anchor.web3.SystemProgram.programId,
+            },
+        });
+
+        loadUserAccount();
+    }
+    async function registerUserChangeHook() {
+        const [userPub, _bump] = await getUserAccount(wallet);
+        program.account.userAccount.subscribe(userPub).addListener("change", (acc: IdlAccounts<Balex>['userAccount']) => { setUserAccount(acc) });
+    }
+
+    useEffect(() => {
+        if (program) {
+            loadUserAccount();
+        }
+        console.log(program)
+        console.log(userAccount, 'user account')
+    }, [program]);
+
+    useEffect(() => {
+        if (userAccount) {
+            registerUserChangeHook();
+        }
+    }, [userAccount]);
+
+    if (!userAccount || !wallet)
+        return <div></div>;
     return (
-        <div className="App">
-            <div>
-                <StubOracle />
-                <UserAccount />
-                <OrderBook />
+        <div className='content'>
+            <div style={{ height: '100%' }}>
+                <Account userAccount={userAccount} />
+            </div>
+
+            <div style={{ height: '100%', display: 'flex', flex: '1' }}>
+                <NewOrder />
+                <OpenOrders />
             </div>
         </div>
     );
@@ -239,7 +292,7 @@ export const UserAccount = () => {
     const [userAccount, setUserAccount] = useState<anchor.IdlAccounts<Balex>['userAccount']>(null);
 
     const [market, setMarket] = useState<anchor.IdlAccounts<Balex>['lexMarket']>(null)
-    
+
     useEffect(() => {
         if (!program) {
             return null;
@@ -271,10 +324,9 @@ export const UserAccount = () => {
 
         loadUserAccount();
     }
-
     async function registerUserChangeHook() {
         const [userPub, _bump] = await getUserAccount(wallet);
-        program.account.userAccount.subscribe(userPub).addListener("change", (acc: IdlAccounts<Balex>['userAccount']) => {setUserAccount(acc)});
+        program.account.userAccount.subscribe(userPub).addListener("change", (acc: IdlAccounts<Balex>['userAccount']) => { setUserAccount(acc) });
     }
 
     useEffect(() => {
@@ -285,14 +337,14 @@ export const UserAccount = () => {
     }, [program]);
 
     useEffect(() => {
-        if(userAccount) {
+        if (userAccount) {
             registerUserChangeHook();
         }
     }, [userAccount]);
 
     if (userAccount) {
         return (
-            <antd.Card title="User Account">
+            <antd.Card title="Trade (User Account)">
                 <antd.Row>
                     <antd.Col>
                         Your Total BTC is {userAccount.quoteTotal.toNumber()} and available USDT is {userAccount.baseFree.toNumber()}
@@ -363,7 +415,7 @@ export const UserAccount = () => {
     }
 };
 
-export const UserTokenManage = ({name, mint, vault}: {name: string, mint: PublicKey, vault: PublicKey}) => {
+export const UserTokenManage = ({ name, mint, vault }: { name: string, mint: PublicKey, vault: PublicKey }) => {
     const wallet = useAnchorWallet();
     const program = useProgram(wallet);
 
@@ -390,9 +442,9 @@ export const UserTokenManage = ({name, mint, vault}: {name: string, mint: Public
         try {
             await connection.getTokenAccountBalance(token, 'confirmed');
             setUserTokenExists(true);
-        } catch(err) {
+        } catch (err) {
             console.log(name, err)
-        } 
+        }
     }
 
     useEffect(() => {
@@ -401,7 +453,7 @@ export const UserTokenManage = ({name, mint, vault}: {name: string, mint: Public
         }
     }, [wallet])
 
-    useEffect(() => {updateUserBalance()}, [userTokenExists, userToken]);
+    useEffect(() => { updateUserBalance() }, [userTokenExists, userToken]);
 
     useInterval(updateUserBalance, 5000);
 
@@ -412,9 +464,9 @@ export const UserTokenManage = ({name, mint, vault}: {name: string, mint: Public
             feePayer: wallet.publicKey
         }).add(
             spl_token.Token.createAssociatedTokenAccountInstruction(spl_token.ASSOCIATED_TOKEN_PROGRAM_ID, spl_token.TOKEN_PROGRAM_ID, mint, userToken,
-            wallet.publicKey, wallet.publicKey)
+                wallet.publicKey, wallet.publicKey)
         );
-        
+
         await connection.confirmTransaction(await program.provider.send(transaction))
         setUserTokenExists(true);
     }
@@ -433,7 +485,7 @@ export const UserTokenManage = ({name, mint, vault}: {name: string, mint: Public
             }
         })
     }
-    
+
     async function withdraw() {
         const [userPub, bump] = await getUserAccount(wallet);
 
@@ -462,7 +514,7 @@ export const UserTokenManage = ({name, mint, vault}: {name: string, mint: Public
     } else if (!userTokenExists) {
         return (
             <antd.Card title={name}>
-                <antd.Row style={{padding: 10}}>
+                <antd.Row style={{ padding: 10 }}>
                     <antd.Col>
                         <antd.Button onClick={createTokenAccount}>Create {name} Associated Token Account</antd.Button>
                     </antd.Col>
@@ -472,11 +524,11 @@ export const UserTokenManage = ({name, mint, vault}: {name: string, mint: Public
     } else {
         return (
             <antd.Card title={name}>
-                <antd.Row style={{padding: 10}}>
+                <antd.Row style={{ padding: 10 }}>
                     <antd.Col>
                         <antd.Typography.Text>You have {tokenBalance} {name}. Amount: </antd.Typography.Text>
                     </antd.Col>
-                    <antd.Col style={{width: 20}}>
+                    <antd.Col style={{ width: 20 }}>
                     </antd.Col>
                     <antd.Col>
                         <antd.InputNumber
@@ -484,7 +536,7 @@ export const UserTokenManage = ({name, mint, vault}: {name: string, mint: Public
                         ></antd.InputNumber>
                     </antd.Col>
                 </antd.Row>
-                <antd.Row style={{alignContent: 'center'}}>
+                <antd.Row style={{ alignContent: 'center' }}>
                     <antd.Col>
                         <antd.Button onClick={mintToken}>Mint</antd.Button>
                     </antd.Col>
@@ -500,59 +552,59 @@ export const UserTokenManage = ({name, mint, vault}: {name: string, mint: Public
     }
 }
 
-export const NewOrder = ({userAccount}: {userAccount: IdlAccounts<Balex>['userAccount']}) => {
-    const [amount, setAmount] = useState<number>(0)
-    const [rate, setRate] = useState<number>(0)
-    const wallet = useAnchorWallet();
-    const program = useProgram(wallet);
+// export const NewOrder = ({userAccount}: {userAccount: IdlAccounts<Balex>['userAccount']}) => {
+//     const [amount, setAmount] = useState<number>(0)
+//     const [rate, setRate] = useState<number>(0)
+//     const wallet = useAnchorWallet();
+//     const program = useProgram(wallet);
 
-    async function newOrder(type: number) {
-        const [userPub, bump] = await getUserAccount(wallet);
-        const [orderbook, eventQueue, asks, bids] = await getMarketAccounts(program)
+//     async function newOrder(type: number) {
+//         const [userPub, bump] = await getUserAccount(wallet);
+//         const [orderbook, eventQueue, asks, bids] = await getMarketAccounts(program)
 
-        await program.rpc.newOrder(bump, type, new anchor.BN(rate), new anchor.BN(amount), {
-            accounts: {
-                owner: wallet.publicKey,
-                userAccount: userPub,
-                market: lexMarketPubkey,
-                eventQueue: eventQueue,
-                asks: asks,
-                bids: bids,
-                orderbook: orderbook,
-                priceOracle: stubOracle.publicKey,
-                systemProgram: anchor.web3.SystemProgram.programId
-            }
-        })
-    }
+//         await program.rpc.newOrder(bump, type, new anchor.BN(rate), new anchor.BN(amount), {
+//             accounts: {
+//                 owner: wallet.publicKey,
+//                 userAccount: userPub,
+//                 market: lexMarketPubkey,
+//                 eventQueue: eventQueue,
+//                 asks: asks,
+//                 bids: bids,
+//                 orderbook: orderbook,
+//                 priceOracle: stubOracle.publicKey,
+//                 systemProgram: anchor.web3.SystemProgram.programId
+//             }
+//         })
+//     }
 
-    return (
-        <antd.Card title="New order">
-            <antd.Row>
-                    Amount:
-                    <antd.InputNumber
-                        onChange={(value) => setAmount(parseInt(value.toString()))}
-                    ></antd.InputNumber>
-            </antd.Row>
-            <antd.Row>
-                    Inerest Rate:
-                    <antd.InputNumber
-                        onChange={(value) => setRate(parseInt(value.toString()))}
-                    ></antd.InputNumber>
-            </antd.Row>
-            <antd.Row>
-                <antd.Button onClick={() => newOrder(0)}>Borrow</antd.Button>
-                <antd.Button onClick={() => newOrder(1)}>Lend</antd.Button>
-            </antd.Row>
-        </antd.Card>
-    )
-}
+//     return (
+//         <antd.Card title="New order">
+//             <antd.Row>
+//                     Amount:
+//                     <antd.InputNumber
+//                         onChange={(value) => setAmount(parseInt(value.toString()))}
+//                     ></antd.InputNumber>
+//             </antd.Row>
+//             <antd.Row>
+//                     Inerest Rate:
+//                     <antd.InputNumber
+//                         onChange={(value) => setRate(parseInt(value.toString()))}
+//                     ></antd.InputNumber>
+//             </antd.Row>
+//             <antd.Row>
+//                 <antd.Button onClick={() => newOrder(0)}>Borrow</antd.Button>
+//                 <antd.Button onClick={() => newOrder(1)}>Lend</antd.Button>
+//             </antd.Row>
+//         </antd.Card>
+//     )
+// }
 
 
 export const OrderBook = () => {
     const wallet = useAnchorWallet();
     const program = useProgram(wallet);
-    const [asks, setAsks] = useState<{size: number, price: number}[]>([])
-    const [bids, setBids] = useState<{size: number, price: number}[]>([])
+    const [asks, setAsks] = useState<{ size: number, price: number }[]>([])
+    const [bids, setBids] = useState<{ size: number, price: number }[]>([])
 
     async function updateOrderBook() {
         if (!program) {
@@ -587,15 +639,15 @@ export const OrderBook = () => {
             <antd.Row gutter={{ xs: 8, sm: 16, md: 24, lg: 32 }}>
                 <antd.Col className="gutter-row" span={6}>
                     <antd.Card title="Borrows">
-                        {bids.map( ({price, size}) => (
-                            <antd.Row key={price + ''}>{size} with {price}% interest</antd.Row> 
+                        {bids.map(({ price, size }) => (
+                            <antd.Row key={price + ''}>{size} with {price}% interest</antd.Row>
                         ))}
                     </antd.Card>
                 </antd.Col>
                 <antd.Col className="gutter-row" span={6}>
                     <antd.Card title="Lends">
-                        {asks.map( ({price, size}) => (
-                            <antd.Row key={price + ''}>{size} with {price}% interest</antd.Row> 
+                        {asks.map(({ price, size }) => (
+                            <antd.Row key={price + ''}>{size} with {price}% interest</antd.Row>
                         ))}
                     </antd.Card>
                 </antd.Col>
@@ -605,116 +657,116 @@ export const OrderBook = () => {
 }
 
 
-export const OpenOrders = ({userAccount}: {userAccount: IdlAccounts<Balex>['userAccount']}) => {
-    const wallet = useAnchorWallet();
-    const program = useProgram(wallet);
+// export const OpenOrders = ({userAccount}: {userAccount: IdlAccounts<Balex>['userAccount']}) => {
+//     const wallet = useAnchorWallet();
+//     const program = useProgram(wallet);
 
-    type OrderType = {size: number, price: number, order_id: anchor.BN}
+//     type OrderType = {size: number, price: number, order_id: anchor.BN}
 
-    const [borrowOrders, setBorrowOrders] = useState<OrderType[]>([])
-    const [lendOrders, setLendOrders] = useState<OrderType[]>([])
+//     const [borrowOrders, setBorrowOrders] = useState<OrderType[]>([])
+//     const [lendOrders, setLendOrders] = useState<OrderType[]>([])
 
-    async function updateOrders() {
-        const [orderbook, eventQueue, asks, bids] = await getMarketAccounts(program)
-        const connection = program.provider.connection;
-        const marketData = await MarketState.retrieve(connection, orderbook, 'confirmed')
-        const askData = await marketData.loadAsksSlab(connection, 'confirmed')
-        const bidData = await marketData.loadBidsSlab(connection, 'confirmed')
+//     async function updateOrders() {
+//         const [orderbook, eventQueue, asks, bids] = await getMarketAccounts(program)
+//         const connection = program.provider.connection;
+//         const marketData = await MarketState.retrieve(connection, orderbook, 'confirmed')
+//         const askData = await marketData.loadAsksSlab(connection, 'confirmed')
+//         const bidData = await marketData.loadBidsSlab(connection, 'confirmed')
 
-        let borrowOrders: OrderType[] = []
-        let lendOrders: OrderType[] = []
-        for (let i = 0; i < userAccount.openOrdersCnt; i++) { 
-            const order_id = userAccount.openOrders[i]
+//         let borrowOrders: OrderType[] = []
+//         let lendOrders: OrderType[] = []
+//         for (let i = 0; i < userAccount.openOrdersCnt; i++) { 
+//             const order_id = userAccount.openOrders[i]
 
-            let askNode = askData.getNodeByKey(order_id as any);
-            if (askNode) {
-                let size = askNode.baseQuantity.toNumber()
-                lendOrders.push({price: getPriceFromKey(order_id).toNumber(), order_id: order_id, size: size})
-            } else {
-                let bidNode = bidData.getNodeByKey(order_id as any);
-                if (bidNode) {
-                    let size = bidNode.baseQuantity.toNumber()
-                    borrowOrders.push({ price: getPriceFromKey(order_id).toNumber(), order_id: order_id, size: size })
-                } else {
-                    console.log("Strange!");
-                    continue;
-                }
-            } 
-        }
+//             let askNode = askData.getNodeByKey(order_id as any);
+//             if (askNode) {
+//                 let size = askNode.baseQuantity.toNumber()
+//                 lendOrders.push({price: getPriceFromKey(order_id).toNumber(), order_id: order_id, size: size})
+//             } else {
+//                 let bidNode = bidData.getNodeByKey(order_id as any);
+//                 if (bidNode) {
+//                     let size = bidNode.baseQuantity.toNumber()
+//                     borrowOrders.push({ price: getPriceFromKey(order_id).toNumber(), order_id: order_id, size: size })
+//                 } else {
+//                     console.log("Strange!");
+//                     continue;
+//                 }
+//             } 
+//         }
 
-        lendOrders.sort((a, b) => a.price - b.price)
-        borrowOrders.sort((a, b) => b.price - a.price)
+//         lendOrders.sort((a, b) => a.price - b.price)
+//         borrowOrders.sort((a, b) => b.price - a.price)
 
-        setLendOrders(lendOrders);
-        setBorrowOrders(borrowOrders);
-    }
+//         setLendOrders(lendOrders);
+//         setBorrowOrders(borrowOrders);
+//     }
 
-    async function registerChanges() {
-        const [orderbook, eventQueue, asks, bids] = await getMarketAccounts(program)
-        program.provider.connection.onAccountChange(orderbook, updateOrders, 'confirmed');
-        program.provider.connection.onAccountChange(bids, updateOrders, 'confirmed');
-        program.provider.connection.onAccountChange(asks, updateOrders, 'confirmed');
-    }
+//     async function registerChanges() {
+//         const [orderbook, eventQueue, asks, bids] = await getMarketAccounts(program)
+//         program.provider.connection.onAccountChange(orderbook, updateOrders, 'confirmed');
+//         program.provider.connection.onAccountChange(bids, updateOrders, 'confirmed');
+//         program.provider.connection.onAccountChange(asks, updateOrders, 'confirmed');
+//     }
 
-    useEffect(() => {
-        updateOrders();
-    }, [userAccount])
+//     useEffect(() => {
+//         updateOrders();
+//     }, [userAccount])
 
-    useInterval(updateOrders, 5000)
+//     useInterval(updateOrders, 5000)
 
-    async function cancelOrder(order_id: anchor.BN) {
-        const [userPub, bump] = await getUserAccount(wallet);
-        const [orderbook, eventQueue, asks, bids] = await getMarketAccounts(program)
-        program.rpc.cancelMyOrder(bump, order_id, {
-            accounts: {
-                market: lexMarketPubkey,
-                owner: wallet.publicKey,
-                userAccount: userPub,
-                orderbook: orderbook,
-                eventQueue: eventQueue,
-                asks: asks,
-                bids: bids,
-                systemProgram: anchor.web3.SystemProgram.programId
-            }
-        });
-    }
+//     async function cancelOrder(order_id: anchor.BN) {
+//         const [userPub, bump] = await getUserAccount(wallet);
+//         const [orderbook, eventQueue, asks, bids] = await getMarketAccounts(program)
+//         program.rpc.cancelMyOrder(bump, order_id, {
+//             accounts: {
+//                 market: lexMarketPubkey,
+//                 owner: wallet.publicKey,
+//                 userAccount: userPub,
+//                 orderbook: orderbook,
+//                 eventQueue: eventQueue,
+//                 asks: asks,
+//                 bids: bids,
+//                 systemProgram: anchor.web3.SystemProgram.programId
+//             }
+//         });
+//     }
 
-    return (<antd.Card title="Open Orders">
-        <antd.Row>
-            <antd.Col style={{ padding: 10 }}>
-                <antd.Card title="Borrow">
-                    {borrowOrders.map((order) => (
-                        <antd.Row style={{ padding: 5 }} key={order.order_id.toString()}>
-                            <antd.Col flex='auto'>
-                                {order.size} USD with {order.price}% interest.
-                            </antd.Col>
-                            <antd.Col flex={1}>
-                                <antd.Button style={{ paddingLeft: 15 }} onClick={() => cancelOrder(order.order_id)}>Cancel</antd.Button>
-                            </antd.Col>
-                        </antd.Row>
-                    ))}
-                </antd.Card>
-            </antd.Col>
-            <antd.Col style={{padding: 10}}>
-                <antd.Card title="Lend">
-                    {lendOrders.map((order) => (
-                        <antd.Row style={{ padding: 5 }} key={order.order_id.toString()}>
-                            <antd.Col flex='auto'>
-                                {order.size} USD with {order.price}% interest.
-                            </antd.Col>
-                            <antd.Col flex={1}>
-                                <antd.Button style={{ paddingLeft: 15 }} onClick={() => cancelOrder(order.order_id)}>Cancel</antd.Button>
-                            </antd.Col>
-                        </antd.Row>
-                    ))}
-                </antd.Card>
-            </antd.Col>
+//     return (<antd.Card title="Open Orders" style={{ flex: '1'}}>
+//         <antd.Row>
+//             <antd.Col style={{ padding: 10 }}>
+//                 <antd.Card title="Borrow">
+//                     {borrowOrders.map((order) => (
+//                         <antd.Row style={{ padding: 5 }} key={order.order_id.toString()}>
+//                             <antd.Col flex='auto'>
+//                                 {order.size} USD with {order.price}% interest.
+//                             </antd.Col>
+//                             <antd.Col flex={1}>
+//                                 <antd.Button style={{ paddingLeft: 15 }} onClick={() => cancelOrder(order.order_id)}>Cancel</antd.Button>
+//                             </antd.Col>
+//                         </antd.Row>
+//                     ))}
+//                 </antd.Card>
+//             </antd.Col>
+//             <antd.Col style={{padding: 10}}>
+//                 <antd.Card title="Lend">
+//                     {lendOrders.map((order) => (
+//                         <antd.Row style={{ padding: 5 }} key={order.order_id.toString()}>
+//                             <antd.Col flex='auto'>
+//                                 {order.size} USD with {order.price}% interest.
+//                             </antd.Col>
+//                             <antd.Col flex={1}>
+//                                 <antd.Button style={{ paddingLeft: 15 }} onClick={() => cancelOrder(order.order_id)}>Cancel</antd.Button>
+//                             </antd.Col>
+//                         </antd.Row>
+//                     ))}
+//                 </antd.Card>
+//             </antd.Col>
 
-        </antd.Row>
-    </antd.Card>)
-}
+//         </antd.Row>
+//     </antd.Card>)
+// }
 
-export const OpenDebts = ({userAccount}: {userAccount: IdlAccounts<Balex>['userAccount']}) => {
+export const OpenDebts = ({ userAccount }: { userAccount: IdlAccounts<Balex>['userAccount'] }) => {
     const wallet = useAnchorWallet();
     const program = useProgram(wallet);
 

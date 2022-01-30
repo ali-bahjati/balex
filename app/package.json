@@ -28,6 +28,7 @@
         "nuke": "shx rm -rf node_modules yarn.lock"
     },
     "dependencies": {
+        "@ant-design/dark-theme": "^2.0.2",
         "@bonfida/aaob": "./bonfida-aaob",
         "@project-serum/anchor": "^0.20.1",
         "@pythnetwork/client": "^2.5.1",

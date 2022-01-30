@@ -1,13 +1,125 @@
 @import './reset.css';
 
-html, body {
-    background-color: #303030;
-    color: #FFFFFF;
+html,
+body {
+    background-color: #181A1C;
+    color           : #FFFFFF;
+    font-family     : -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial,
+        'Noto Sans', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol',
+        'Noto Color Emoji';
 }
 
 #app {
-    min-height: 100vh;
-    display: flex;
+    min-height     : 100vh;
+    display        : flex;
     justify-content: center;
+    flex-direction : column;
+}
+
+.header {
+    height     : 64px;
+    display    : flex;
     align-items: center;
+    padding    : 10px;
+}
+
+.content {
+    flex   : 1;
+    margin : 10px;
+    display: flex;
+}
+
+.card {
+    display         : flex;
+    flex-direction  : column;
+    border-radius   : 10px;
+    background-color: #1D1E22;
+    padding         : 10px;
+    height          : 100%;
+    min-width       : 300px;
+}
+
+.card .title {
+    color          : #e5e3ec;
+    font-weight    : 500;
+    font-size      : medium;
+    height         : 35px;
+    display        : flex;
+    justify-content: center;
+    margin         : 5px 0px;
+}
+
+.card .text {
+    display: flex;
+    margin : 5px 0px;
+}
+
+.card .label {
+    flex       : 1;
+    color      : #c1bed3;
+    font-size  : small;
+    display    : flex;
+    align-items: center;
+}
+
+.card .value {
+    color    : #e5e3ec;
+    font-size: medium;
+}
+
+input {
+    background-color: transparent;
+    border-radius   : 30px;
+    border          : 1px solid #c1bed3;
+    color           : #e5e3ec;
+    padding         : 0px 10px;
+    text-align      : end;
+}
+
+input:focus,
+button:focus {
+    outline: none !important;
+    border : 1px solid #543CDFB0;
+}
+
+.flex {
+    display: flex;
+}
+
+.mx-5 {
+    margin-left : 5px;
+    margin-right: 5px;
+}
+
+.my-5 {
+    margin-top   : 5px;
+    margin-bottom: 5px;
+}
+
+.mx-10 {
+    margin-left : 10px;
+    margin-right: 10px;
+}
+
+.ml-5 {
+    margin-left: 5px;
+}
+
+.mt-5 {
+    margin-top: 5px;
+}
+
+button {
+    border-radius   : 30px;
+    color           : #e5e3ec;
+    background-color: #2C2D31;
+    padding         : 7px 10px;
+    flex            : 1;
+    font-size       : small;
+    border          : none;
+    cursor          : pointer;
+}
+
+button:hover {
+    background-color: #543CDF;
 }
