@@ -162,7 +162,7 @@ pub fn liquidate_debts(ctx: Context<LiquidateDebts>, debts_id: Vec<u16>, debts_a
     let borrower_health = get_user_health_factor(&borrower_account, &market, &ctx.accounts.price_oracle);
 
     if borrower_health < 100 {
-        msg!("Liquidator could bring health factor more >= 100%, it's {}", borrower_health);
+        msg!("Liquidator should bring health factor more >= 100%, it's {}", borrower_health);
         return Err(ProgramError::Custom(0));
     }
 
