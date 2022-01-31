@@ -215,7 +215,7 @@ impl Context {
                 });
 
                 for i in 0..user_account.open_debts_cnt as usize {
-                    if debt_qty[i] == 0 {
+                    if debt_qty[i] == 0 { // Since i couldn't upgrade program
                         continue;
                     }
                     let debt_id = user_account.open_debts[i];
