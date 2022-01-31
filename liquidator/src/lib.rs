@@ -177,6 +177,7 @@ impl Context {
                     debt_qty.push(0);
                 }
 
+                let mut trial = 0;
                 while liquid_value > 0 {
                     for i in 0..user_account.open_debts_cnt as usize {
                         let debt_id = user_account.open_debts[i];
@@ -190,6 +191,10 @@ impl Context {
                         if liquid_value == 0 {
                             break;
                         }
+                    }
+                    trial += 1;
+                    if trial > 10 {
+                        break;
                     }
                 }
 
