@@ -143,7 +143,7 @@ impl Context {
                     });
                     request = request.args(CancelRiskyOrderInst {
                         _bump,
-                        order_id: user_account.open_orders[0]
+                        order_id: user_account.open_orders[i]
                     });
                     request.send()?;
                     return Ok(Signature::new_unique());
