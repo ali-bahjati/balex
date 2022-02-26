@@ -25,7 +25,7 @@ pub struct Deposit<'info> {
     #[account(mut)]
     pub owner: Signer<'info>,
 
-    #[account(mut, seeds=[&market.key().to_bytes(), &owner.key().to_bytes()], bump=_bump)]
+    #[account(mut, seeds=[&market.key().to_bytes(), &owner.key().to_bytes()], bump)]
     // TODO: If it's gonna be per market also add market here
     pub user_account: AccountLoader<'info, UserAccount>,
 
